@@ -336,12 +336,12 @@ Introduced in DeepSeek-V2 and carried into V3, **MLA is the modern alternative t
 
 Instead of just grouping heads, MLA compresses the Key and Value vectors into a **low-dimensional latent space** before storing them in the cache.
 
-```
-Query (Up-projected) ────────┐
-                             ▼
-Key, Value (Down-projected) ─▶ [Low-dim Latent Cache] ─▶ [Output]
-                             ▲
-                             └─ Projection Matrices
+```mermaid
+flowchart LR
+    Q["Query (Up-projected)"] --> L
+    KV["Key, Value (Down-projected)"] --> L["Low-dim Latent Cache"]
+    P["Projection Matrices"] --> L
+    L --> OUT["Output"]
 ```
 
 | Metric | MHA | GQA | MLA |

@@ -52,57 +52,18 @@ The last four rows are the ones 2026 made non-optional. Agent and VCS config get
 
 ### Full Pipeline
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                       LLM CI/CD PIPELINE                         │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ┌──────────────┐                                               │
-│  │   Commit     │                                               │
-│  │   Trigger    │                                               │
-│  └──────┬───────┘                                               │
-│         │                                                        │
-│         ▼                                                        │
-│  ┌──────────────┐                                               │
-│  │   Validate   │ ─── Prompt syntax, config validation         │
-│  └──────┬───────┘                                               │
-│         │                                                        │
-│         ▼                                                        │
-│  ┌──────────────┐                                               │
-│  │ Unit Tests   │ ─── Fast, deterministic tests                │
-│  └──────┬───────┘                                               │
-│         │                                                        │
-│         ▼                                                        │
-│  ┌──────────────┐                                               │
-│  │  Golden Set  │ ─── Known input/output pairs                 │
-│  │    Tests     │                                               │
-│  └──────┬───────┘                                               │
-│         │                                                        │
-│         ▼                                                        │
-│  ┌──────────────┐                                               │
-│  │   LLM Eval   │ ─── Quality scoring, regression detection    │
-│  │   (Sampled)  │                                               │
-│  └──────┬───────┘                                               │
-│         │                                                        │
-│         ▼                                                        │
-│  ┌──────────────┐                                               │
-│  │ Quality Gate │ ─── Pass/fail based on thresholds            │
-│  └──────┬───────┘                                               │
-│         │                                                        │
-│    ┌────┴────┐                                                  │
-│    ▼         ▼                                                  │
-│ ┌──────┐ ┌───────┐                                             │
-│ │Canary│ │Blocked│                                             │
-│ │Deploy│ │       │                                             │
-│ └──┬───┘ └───────┘                                             │
-│    │                                                            │
-│    ▼                                                            │
-│ ┌──────────────┐                                               │
-│ │  Production  │                                               │
-│ │  Monitoring  │                                               │
-│ └──────────────┘                                               │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph PIPE["LLM CI/CD PIPELINE"]
+        A["Commit<br>Trigger"] --> B["Validate<br>Prompt syntax, config validation"]
+        B --> C["Unit Tests<br>Fast, deterministic tests"]
+        C --> D["Golden Set<br>Tests<br>Known input/output pairs"]
+        D --> E["LLM Eval<br>(Sampled)<br>Quality scoring, regression detection"]
+        E --> F{"Quality Gate<br>Pass/fail based on thresholds"}
+        F --> G["Canary<br>Deploy"]
+        F --> H["Blocked"]
+        G --> I["Production<br>Monitoring"]
+    end
 ```
 
 ---

@@ -67,14 +67,21 @@ Document processing, data entry, and reporting represent the highest-volume ente
 
 ### Document Processing
 
-```
-Input Documents          Agent Pipeline              Output
-+-----------+     +---------------------------+     +----------+
-| Invoices  | --> | OCR/Parser Tool           | --> | Structured|
-| Contracts | --> | Entity Extraction Agent   | --> | Data in   |
-| Forms     | --> | Validation + Cross-check  | --> | ERP/CRM   |
-| Emails    | --> | Human Review (exceptions) | --> |           |
-+-----------+     +---------------------------+     +----------+
+```mermaid
+flowchart LR
+    subgraph IN["Input Documents"]
+        I1["Invoices"]
+        I2["Contracts"]
+        I3["Forms"]
+        I4["Emails"]
+    end
+    subgraph PIPE["Agent Pipeline"]
+        P1["OCR/Parser Tool"] --> P2["Entity Extraction Agent"] --> P3["Validation + Cross-check"] --> P4["Human Review (exceptions)"]
+    end
+    subgraph OUT["Output"]
+        O1["Structured Data in ERP/CRM"]
+    end
+    IN --> PIPE --> OUT
 ```
 
 **Real metrics from production deployments:**
@@ -146,13 +153,22 @@ Monitoring, incident response, and infrastructure management. This category has 
 
 ### Monitoring and Alerting
 
-```
-Metrics Pipeline          Agent Layer              Actions
-+----------+        +-------------------+        +----------+
-| Prometheus| -----> | Alert Triage Agent| -----> | Suppress  |
-| Datadog   | -----> | (reads dashboards,| -----> | Escalate  |
-| PagerDuty | -----> |  correlates events)| ----> | Auto-heal |
-+----------+        +-------------------+        +----------+
+```mermaid
+flowchart LR
+    subgraph MET["Metrics Pipeline"]
+        M1["Prometheus"]
+        M2["Datadog"]
+        M3["PagerDuty"]
+    end
+    subgraph AGT["Agent Layer"]
+        A1["Alert Triage Agent<br>(reads dashboards,<br>correlates events)"]
+    end
+    subgraph ACT["Actions"]
+        X1["Suppress"]
+        X2["Escalate"]
+        X3["Auto-heal"]
+    end
+    MET --> AGT --> ACT
 ```
 
 ### Incident Response

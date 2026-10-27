@@ -429,10 +429,12 @@ Every RAG pipeline change (new embeddings, chunk size, prompt edit, reranker swa
 
 ### CI/CD Integration
 
-```
-  PR (RAG change) --> CI: Load golden set --> Run pipeline --> Compute metrics
-                          --> Compare vs. baseline --> FAIL if drop > 5%, WARN if > 2%
-                          --> Post metrics table as PR comment
+```mermaid
+flowchart LR
+    PR["PR (RAG change)"] --> CI["CI: Load golden set"] --> RUN["Run pipeline"] --> CM["Compute metrics"]
+    CM --> CB["Compare vs. baseline"]
+    CB --> V["FAIL if drop #gt; 5%, WARN if #gt; 2%"]
+    V --> PC["Post metrics table as PR comment"]
 ```
 
 ### Quality Gates

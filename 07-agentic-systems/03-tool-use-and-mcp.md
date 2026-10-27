@@ -341,13 +341,16 @@ MCP defines how an agent connects to **tools and data**. A2A defines how an **or
 
 The v1.0 methods are `SendMessage`, `SendStreamingMessage`, `GetTask`, `ListTasks`, `CancelTask`, and `SubscribeToTask`, with REST bindings such as `POST /message:send` and `GET /tasks/{id}`. There is no `POST /tasks` or `tasks.create`: the client sends a **message**, and the server decides whether to answer directly or create a **task**. That is the design choice interviewers probe.
 
-```
-[Client Agent] ── SendMessage (POST /message:send) ──→ [Remote Agent]
-                                                        │ server decides: reply, or create a Task
-               ←── Message, or Task {id, state: working} ┘
-[Client Agent] ── SubscribeToTask / GetTask ──→
-               ←── streamed status updates and artifacts
-               ←── Task completed (final artifact)
+```mermaid
+sequenceDiagram
+    participant C as Client Agent
+    participant R as Remote Agent
+    C->>R: SendMessage (POST /message:send)
+    Note over R: server decides: reply, or create a Task
+    R-->>C: Message, or Task {id, state: working}
+    C->>R: SubscribeToTask / GetTask
+    R-->>C: streamed status updates and artifacts
+    R-->>C: Task completed (final artifact)
 ```
 
 A2A tasks support long-running operations with streaming status updates, making it suitable for enterprise workflows spanning minutes or hours.
@@ -377,20 +380,13 @@ In production enterprise systems, multiple protocols operate at different layers
 
 ### How They Complement Each Other
 
-```
-┌──────────────────────────────────────────┐
-│            Enterprise System             │
-│                                          │
-│  ┌─────────┐  A2A   ┌─────────┐         │
-│  │ Agent A  │◄──────►│ Agent B │         │
-│  │(Vendor X)│        │(Vendor Y)│        │
-│  └────┬─────┘        └────┬─────┘        │
-│       │ MCP                │ MCP          │
-│  ┌────▼─────┐        ┌────▼─────┐        │
-│  │ DB Tool  │        │ API Tool │        │
-│  │ Server   │        │ Server   │        │
-│  └──────────┘        └──────────┘        │
-└──────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph ES["Enterprise System"]
+        A["Agent A<br>(Vendor X)"] <-->|"A2A"| B["Agent B<br>(Vendor Y)"]
+        A -->|"MCP"| DB["DB Tool Server"]
+        B -->|"MCP"| API["API Tool Server"]
+    end
 ```
 
 **Key insight**: MCP and A2A are complementary, not competing. MCP handles agent-to-tool connections; A2A handles agent-to-agent coordination. Production systems use both.

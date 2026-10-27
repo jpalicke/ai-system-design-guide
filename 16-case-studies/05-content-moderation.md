@@ -63,53 +63,31 @@ This case study covers designing an AI-powered content moderation system for a s
 
 ### High-Level Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                  CONTENT MODERATION PIPELINE                     │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ┌─────────────┐                                                │
-│  │   Content   │                                                │
-│  │   Ingestion │                                                │
-│  └──────┬──────┘                                                │
-│         │                                                        │
-│         ▼                                                        │
-│  ┌─────────────────────────────────────────────────────────┐    │
-│  │                   TIER 1: FAST FILTERS                   │    │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐              │    │
-│  │  │  Hash    │  │ Keyword  │  │  Known   │              │    │
-│  │  │ Matching │  │ Blocklist│  │ Patterns │              │    │
-│  │  └──────────┘  └──────────┘  └──────────┘              │    │
-│  └──────────────────────────┬──────────────────────────────┘    │
-│                             │                                    │
-│         ┌───────────────────┼───────────────────┐               │
-│         │ Blocked           │ Pass              │ Elevated      │
-│         ▼                   ▼                   ▼               │
-│  ┌─────────────┐    ┌─────────────────────────────────────┐    │
-│  │   Block +   │    │          TIER 2: ML MODELS          │    │
-│  │   Report    │    │  ┌────────┐  ┌────────┐  ┌────────┐│    │
-│  └─────────────┘    │  │ Vision │  │  Text  │  │ Multi- ││    │
-│                     │  │ Model  │  │ Model  │  │ modal  ││    │
-│                     │  └────────┘  └────────┘  └────────┘│    │
-│                     └──────────────────┬──────────────────┘    │
-│                                        │                        │
-│         ┌──────────────────────────────┼──────────────────┐    │
-│         │ High Confidence              │ Low Confidence   │    │
-│         ▼                              ▼                   │    │
-│  ┌─────────────┐              ┌─────────────────────────┐ │    │
-│  │ Auto Action │              │    TIER 3: LLM REVIEW   │ │    │
-│  └─────────────┘              │  (nuanced cases)        │ │    │
-│                               └────────────┬────────────┘ │    │
-│                                            │               │    │
-│                        ┌───────────────────┼──────────────┐│    │
-│                        │ Confident         │ Uncertain    ││    │
-│                        ▼                   ▼              ││    │
-│                 ┌─────────────┐    ┌─────────────┐       ││    │
-│                 │ Auto Action │    │   Human     │       ││    │
-│                 └─────────────┘    │   Review    │       ││    │
-│                                    └─────────────┘       ││    │
-│                                                          ││    │
-└──────────────────────────────────────────────────────────┘│    │
+```mermaid
+flowchart TD
+    subgraph CMP["CONTENT MODERATION PIPELINE"]
+        CI["Content<br>Ingestion"] --> T1
+        subgraph T1["TIER 1: FAST FILTERS"]
+            direction LR
+            H["Hash<br>Matching"]
+            K["Keyword<br>Blocklist"]
+            KP["Known<br>Patterns"]
+        end
+        T1 -->|"Blocked"| BR["Block +<br>Report"]
+        T1 -->|"Pass"| T2
+        T1 -->|"Elevated"| T2
+        subgraph T2["TIER 2: ML MODELS"]
+            direction LR
+            VM["Vision<br>Model"]
+            TM["Text<br>Model"]
+            MM["Multi-<br>modal"]
+        end
+        T2 -->|"High Confidence"| AA1["Auto Action"]
+        T2 -->|"Low Confidence"| T3
+        T3["TIER 3: LLM REVIEW<br>(nuanced cases)"]
+        T3 -->|"Confident"| AA2["Auto Action"]
+        T3 -->|"Uncertain"| HR["Human<br>Review"]
+    end
 ```
 
 The tiered pipeline as a decision tree. Each tier escalates only what it cannot decide cheaply; percentages are shares of all posts. The cost per decision spans roughly 1:50,000 from Tier 1 to Tier 4, so getting routing right is the main lever for unit economics:

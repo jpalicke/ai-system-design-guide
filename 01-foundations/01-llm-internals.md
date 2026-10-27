@@ -71,25 +71,14 @@ Three main variants emerged based on which parts of the original Transformer are
 
 ### Decoder-Only (Most LLMs Today)
 
-```
-┌─────────────────────────────────────────────────────┐
-│                 Decoder Block (×N)                  │
-│  ┌───────────────────────────────────────────────┐  │
-│  │           Masked Self-Attention               │  │
-│  │   (Each token attends only to previous)       │  │
-│  └───────────────────────────────────────────────┘  │
-│                         │                           │
-│                    Add & Norm                       │
-│                         │                           │
-│  ┌───────────────────────────────────────────────┐  │
-│  │              Feed-Forward Network             │  │
-│  └───────────────────────────────────────────────┘  │
-│                         │                           │
-│                    Add & Norm                       │
-└─────────────────────────────────────────────────────┘
-                          │
-                          ▼
-                   Output Probabilities
+```mermaid
+flowchart TD
+    subgraph DB["Decoder Block (×N)"]
+        SA["Masked Self-Attention<br>(Each token attends only to previous)"] --> AN1["Add & Norm"]
+        AN1 --> FF["Feed-Forward Network"]
+        FF --> AN2["Add & Norm"]
+    end
+    DB --> OUT["Output Probabilities"]
 ```
 
 **Why decoder-only dominates:**
@@ -120,23 +109,15 @@ Decoder-only still dominates, but the encoder has reappeared inside a large gene
 
 MoE replaces the dense Feed-Forward Network (FFN) with multiple "experts" and a "router" that selects which experts process a given token.
 
-```
-┌─────────────────────────────────────────────────────┐
-│                 MoE Layer (Decoder)                 │
-│  ┌───────────────────────────────────────────────┐  │
-│  │               Attention Layer                 │  │
-│  └───────────────────────────────────────────────┘  │
-│                         │                           │
-│                 ┌───────▼───────┐                   │
-│                 │     Router    │                   │
-│                 └─┬───┬───┬───┬─┘                   │
-│          ┌────────┘   │   │   └────────┐            │
-│          ▼            ▼   ▼            ▼            │
-│   ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐│
-│   │ Expert 1 │ │ Expert 2 │ │ Expert 3 │ │ Expert N ││
-│   └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘│
-│        └────────────┴───┬───┴────────────┘        │
-└─────────────────────────▼───────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph MOE["MoE Layer (Decoder)"]
+        ATT["Attention Layer"] --> RT["Router"]
+        RT --> E1["Expert 1"]
+        RT --> E2["Expert 2"]
+        RT --> E3["Expert 3"]
+        RT --> EN["Expert N"]
+    end
 ```
 
 ### Key MoE Nuances for System Design:
@@ -247,21 +228,16 @@ The O(n²) complexity limits context length. A 100K context window means 10 bill
 
 Instead of single attention, modern transformers use multiple "heads" that attend to different aspects in parallel.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Multi-Head Attention                      │
-│                                                              │
-│   ┌─────────┐  ┌─────────┐  ┌─────────┐       ┌─────────┐   │
-│   │ Head 1  │  │ Head 2  │  │ Head 3  │  ...  │ Head h  │   │
-│   │ d_k=64  │  │ d_k=64  │  │ d_k=64  │       │ d_k=64  │   │
-│   └────┬────┘  └────┬────┘  └────┬────┘       └────┬────┘   │
-│        │            │            │                  │        │
-│        └────────────┴────────────┴──────────────────┘        │
-│                              │                               │
-│                         Concatenate                          │
-│                              │                               │
-│                         W_O (project)                        │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph MHA["Multi-Head Attention"]
+        H1["Head 1<br>d_k=64"] --> CAT["Concatenate"]
+        H2["Head 2<br>d_k=64"] --> CAT
+        H3["Head 3<br>d_k=64"] --> CAT
+        HD["..."] --> CAT
+        HH["Head h<br>d_k=64"] --> CAT
+        CAT --> WO["W_O (project)"]
+    end
 ```
 
 **Why multiple heads?**

@@ -237,14 +237,13 @@ The package was renamed from `claude_code_sdk` / `ClaudeCodeOptions` to `claude_
 
 Claude Code supports **sub-agent dispatch** for large codebases:
 
-```
-Main Claude Code session
-    ↓
-"This codebase has 5 modules. I'll spawn sub-agents for each."
-    ├── Sub-agent 1: Fix auth module tests
-    ├── Sub-agent 2: Add type hints to utils/
-    ├── Sub-agent 3: Migrate payments to async
-    └── Sub-agent 4: Update API documentation
+```mermaid
+flowchart TD
+    M["Main Claude Code session"] --> N["'This codebase has 5 modules. I'll spawn sub-agents for each.'"]
+    N --> S1["Sub-agent 1: Fix auth module tests"]
+    N --> S2["Sub-agent 2: Add type hints to utils/"]
+    N --> S3["Sub-agent 3: Migrate payments to async"]
+    N --> S4["Sub-agent 4: Update API documentation"]
 ```
 
 Each sub-agent runs with its own context window, then returns a summary that the main agent reviews and merges. The isolation is the point: exploration noise stays out of the main context.

@@ -39,31 +39,24 @@ There are three fundamental architectures for neural retrieval. Understanding wh
 
 ### How Each Architecture Processes a Query-Document Pair
 
-```
-BI-ENCODER (e.g., E5, BGE):
-  Query  ──► Encoder ──► [1 vector]  ─┐
-                                      ├──► dot product ──► score
-  Doc    ──► Encoder ──► [1 vector]  ─┘
-
-  Total interaction: 1 comparison
-
-─────────────────────────────────────────────
-
-LATE INTERACTION (ColBERT):
-  Query  ──► Encoder ──► [N vectors] ─┐
-                (one per token)       ├──► MaxSim ──► score
-  Doc    ──► Encoder ──► [M vectors] ─┘
-                (one per token)
-
-  Total interaction: N x M comparisons (but decomposable)
-
-─────────────────────────────────────────────
-
-CROSS-ENCODER (e.g., ms-marco-MiniLM):
-  [Query + Doc] ──► Encoder ──► score
-
-  Total interaction: Full self-attention across
-                     all query AND document tokens
+```mermaid
+flowchart LR
+    subgraph BI["BI-ENCODER (e.g., E5, BGE)"]
+        BQ["Query"] --> BE1["Encoder"] --> BV1["1 vector"] --> BS["dot product"]
+        BD["Doc"] --> BE2["Encoder"] --> BV2["1 vector"] --> BS
+        BS --> BSC["score"]
+        BN["Total interaction: 1 comparison"]
+    end
+    subgraph LI["LATE INTERACTION (ColBERT)"]
+        LQ["Query"] --> LE1["Encoder<br>(one per token)"] --> LV1["N vectors"] --> LS["MaxSim"]
+        LD["Doc"] --> LE2["Encoder<br>(one per token)"] --> LV2["M vectors"] --> LS
+        LS --> LSC["score"]
+        LN["Total interaction: N x M comparisons (but decomposable)"]
+    end
+    subgraph CE["CROSS-ENCODER (e.g., ms-marco-MiniLM)"]
+        CQD["Query + Doc"] --> CEN["Encoder"] --> CSC["score"]
+        CN["Total interaction: Full self-attention across<br>all query AND document tokens"]
+    end
 ```
 
 **Insight**: The critical difference is *when* the query and document interact. Bi-encoders never interact (independent encoding). Cross-encoders interact fully (joint encoding). Late interaction is the middle ground: encode independently, then interact cheaply at the token level.
@@ -197,35 +190,15 @@ ColBERTv2 Residual Compression:
 
 PLAID (Performance-optimized Late Interaction Driver) is the indexing and retrieval engine that makes ColBERT practical at scale.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    PLAID RETRIEVAL PIPELINE                     │
-│                                                                 │
-│  Stage 1: CANDIDATE GENERATION                                  │
-│  ─────────────────────────────                                  │
-│  For each query token, find nearest centroids                   │
-│  Collect candidate passages that contain those centroids        │
-│  Result: ~10,000 candidates from millions                       │
-│                                                                 │
-│  Stage 2: CENTROID INTERACTION (with pruning)                   │
-│  ────────────────────────────────────────────                   │
-│  Drop centroids whose query score is below a threshold          │
-│  Approximate MaxSim using centroid-level scores only            │
-│  Filter candidates to top ~1,000                                │
-│                                                                 │
-│  Stage 3: CENTROID INTERACTION (no pruning)                     │
-│  ──────────────────────────────────────────                     │
-│  Re-score survivors with all of their centroid IDs              │
-│  (still no residuals decompressed)                              │
-│  Filter to top ~100                                             │
-│                                                                 │
-│  Stage 4: FULL DECOMPRESSION                                    │
-│  ────────────────────────────                                   │
-│  Fully decompress token vectors for top candidates              │
-│  Compute full MaxSim on the decompressed vectors                │
-│  Return final ranked results                                    │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph PLAID["PLAID RETRIEVAL PIPELINE"]
+        S1["Stage 1: CANDIDATE GENERATION<br>For each query token, find nearest centroids<br>Collect candidate passages that contain those centroids<br>Result: ~10,000 candidates from millions"]
+        S2["Stage 2: CENTROID INTERACTION (with pruning)<br>Drop centroids whose query score is below a threshold<br>Approximate MaxSim using centroid-level scores only<br>Filter candidates to top ~1,000"]
+        S3["Stage 3: CENTROID INTERACTION (no pruning)<br>Re-score survivors with all of their centroid IDs<br>(still no residuals decompressed)<br>Filter to top ~100"]
+        S4["Stage 4: FULL DECOMPRESSION<br>Fully decompress token vectors for top candidates<br>Compute full MaxSim on the decompressed vectors<br>Return final ranked results"]
+        S1 --> S2 --> S3 --> S4
+    end
 ```
 
 **The key insight**: PLAID avoids decompressing all vectors for all documents. Each stage cheaply filters the candidate set so that expensive full scoring only happens on a tiny fraction of the corpus.
@@ -241,12 +214,16 @@ PLAID (Performance-optimized Late Interaction Driver) is the indexing and retrie
 
 PLAID is a purpose-built engine, and most teams do not want a second search system just for late interaction. **MUVERA** (Multi-Vector Retrieval via Fixed Dimensional Encodings, Google Research, NeurIPS 2024) closes that gap: it turns a document's set of token vectors into one long fixed-length vector whose inner product approximates the MaxSim (Chamfer) score, so an ordinary single-vector ANN index can generate candidates.
 
-```
-INDEX:  doc token vectors ──► FDE transform ──► 1 fixed-length vector ──► HNSW / DiskANN
-                 └──────────────────────────────► keep the multi-vector set (compressed, on disk)
-
-QUERY:  query token vectors ──► FDE ──► ANN top-k candidates
-                                              └──► full MaxSim on stored multi-vectors ──► results
+```mermaid
+flowchart LR
+    subgraph IDX["INDEX"]
+        DV["doc token vectors"] --> FDE["FDE transform"] --> FV["1 fixed-length vector"] --> ANN["HNSW / DiskANN"]
+        DV --> KEEP["keep the multi-vector set<br>(compressed, on disk)"]
+    end
+    subgraph QRY["QUERY"]
+        QV["query token vectors"] --> QF["FDE"] --> TOPK["ANN top-k candidates"]
+        TOPK --> MS["full MaxSim on stored multi-vectors"] --> RES["results"]
+    end
 ```
 
 The shape is the same as PLAID (cheap approximate candidates, full MaxSim on a few hundred), but the candidate stage runs on infrastructure you already operate. FDEs are long (thousands of dimensions), so they are usually quantized.
@@ -387,47 +364,42 @@ response = chain.invoke("What features does the Enterprise plan include?")
 
 ### Pattern 1: ColBERT as Primary Retriever
 
-```
-Query ──► ColBERT (PLAID) ──► Top 20 ──► LLM
+```mermaid
+flowchart LR
+    Q["Query"] --> CB["ColBERT (PLAID)"] --> T["Top 20"] --> LLM["LLM"]
 ```
 
 Best for: medium-scale corpora (1M-50M docs) where accuracy is paramount and you can afford the storage overhead.
 
 ### Pattern 2: ColBERT as Reranker (Most Common)
 
-```
-Query ──► BM25 or Bi-Encoder ──► Top 1000 ──► ColBERT Rerank ──► Top 20 ──► LLM
+```mermaid
+flowchart LR
+    Q["Query"] --> F["BM25 or Bi-Encoder"] --> T1["Top 1000"] --> CR["ColBERT Rerank"] --> T2["Top 20"] --> LLM["LLM"]
 ```
 
 Best for: large-scale systems where first-stage retrieval must be cheap, but you need high-quality reranking without the cost of a cross-encoder.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│              COLBERT-AS-RERANKER ARCHITECTURE                   │
-│                                                                 │
-│  User Query                                                     │
-│      │                                                          │
-│      ▼                                                          │
-│  First Stage: BM25 / Bi-Encoder                                 │
-│  (cheap, high recall, Top 1000)                                 │
-│      │                                                          │
-│      ▼                                                          │
-│  Second Stage: ColBERT MaxSim Reranking                         │
-│  (pre-computed doc tokens, score Top 1000)                      │
-│  Cost: only query encoding + MaxSim arithmetic                  │
-│      │                                                          │
-│      ▼                                                          │
-│  Top 20 Passages ──► LLM Generation                             │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph CAR["COLBERT-AS-RERANKER ARCHITECTURE"]
+        UQ["User Query"] --> FS["First Stage: BM25 / Bi-Encoder<br>(cheap, high recall, Top 1000)"]
+        FS --> SS["Second Stage: ColBERT MaxSim Reranking<br>(pre-computed doc tokens, score Top 1000)<br>Cost: only query encoding + MaxSim arithmetic"]
+        SS --> TP["Top 20 Passages"] --> GEN["LLM Generation"]
+    end
 ```
 
 ### Pattern 3: Hybrid (ColBERT + BM25 + Dense)
 
-```
-Query ──┬──► BM25 (Top 50) ────────┐
-        ├──► Dense Bi-Encoder (50) ─┼──► RRF ──► ColBERT Rerank ──► Top 10
-        └──► ColBERT (Top 50) ─────┘
+```mermaid
+flowchart LR
+    Q["Query"] --> B["BM25 (Top 50)"]
+    Q --> D["Dense Bi-Encoder (50)"]
+    Q --> C["ColBERT (Top 50)"]
+    B --> RRF["RRF"]
+    D --> RRF
+    C --> RRF
+    RRF --> CR["ColBERT Rerank"] --> T["Top 10"]
 ```
 
 Best for: maximum accuracy at medium scale. Expensive but covers all retrieval modalities.
@@ -449,22 +421,17 @@ Best for: maximum accuracy at medium scale. Expensive but covers all retrieval m
 
 ### Decision Framework
 
-```
-Is your corpus < 100M documents?
-├── No  ──► Use Bi-Encoder for retrieval + ColBERT for reranking
-└── Yes
-    │
-    Is accuracy more important than infrastructure simplicity?
-    ├── No  ──► Use Bi-Encoder (simpler, cheaper)
-    └── Yes
-        │
-        Can you afford 2-4x storage vs. bi-encoder?
-        ├── No  ──► Use Bi-Encoder + Cross-Encoder reranker
-        └── Yes
-            │
-            Do you want to run a separate retrieval engine?
-            ├── No  ──► MUVERA / native multi-vector in your vector DB
-            └── Yes ──► Use ColBERT (PLAID) as primary retriever
+```mermaid
+flowchart TD
+    A{"Is your corpus #lt; 100M documents?"}
+    A -->|"No"| A1["Use Bi-Encoder for retrieval + ColBERT for reranking"]
+    A -->|"Yes"| B{"Is accuracy more important than infrastructure simplicity?"}
+    B -->|"No"| B1["Use Bi-Encoder (simpler, cheaper)"]
+    B -->|"Yes"| C{"Can you afford 2-4x storage vs. bi-encoder?"}
+    C -->|"No"| C1["Use Bi-Encoder + Cross-Encoder reranker"]
+    C -->|"Yes"| D{"Do you want to run a separate retrieval engine?"}
+    D -->|"No"| D1["MUVERA / native multi-vector in your vector DB"]
+    D -->|"Yes"| D2["Use ColBERT (PLAID) as primary retriever"]
 ```
 
 ### ColBERT vs. Dense Retrieval vs. Hybrid Search
