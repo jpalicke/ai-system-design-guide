@@ -15,10 +15,10 @@ Quick lookup for common patterns. See individual chapters for detailed implement
 | **HyDE** | No direct matches expected | Creative, but can hallucinate |
 | **Parent-Child Chunking** | Need surrounding context | Memory overhead |
 
-```
-Query → Embed → Vector Search → Rerank → Top-K → Generate
-              ↓
-         BM25 Search ─────────┘ (hybrid)
+```mermaid
+flowchart LR
+    Q["Query"] --> E["Embed"] --> V["Vector search"] --> R["Rerank"] --> K["Top-K"] --> G["Generate"]
+    Q --> B["BM25 search"] -->|hybrid| R
 ```
 
 ---
@@ -54,16 +54,9 @@ Query → Embed → Vector Search → Rerank → Top-K → Generate
 
 **Managed harness** options multiplied in September 2026, when OpenAI's Agents API (public beta) and Amazon Bedrock Managed Agents built on it (preview) joined Claude Managed Agents. All of them run durable sessions and crash recovery for you. The disqualifiers are usually data handling rather than features (the Agents API launched with US residency only and no zero data retention), and no managed runtime gives exactly-once semantics for your own side-effecting tools. See [Durable Execution](07-agentic-systems/11-durable-execution.md#managed-agent-runtimes-renting-the-durable-loop).
 
-```
-┌─────────────────────────────────────────┐
-│              REACT LOOP                  │
-│                                         │
-│  Observe → Think → Act → Observe → ...  │
-│              ↓                          │
-│         [Tool Call]                     │
-│              ↓                          │
-│         [Result]                        │
-└─────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    O["Observe"] --> T["Think"] --> A["Act"] --> TC["Tool call"] --> R["Result"] --> O
 ```
 
 ---
@@ -79,18 +72,13 @@ Query → Embed → Vector Search → Rerank → Top-K → Generate
 | **AGENTS.md / CLAUDE.md Manifest** | Project context injection | AGENTS.md works across tools; Claude Code reads it when no CLAUDE.md exists |
 | **Sub-Agent Parallelism** | Large codebase changes | Multiple agents per module |
 
-```
-┌────────────────────────────────────────────────────────┐
-│              AGENTIC CODING LOOP                       │
-│                                                        │
-│  Understand → Plan → Implement → Run Tests → Fix       │
-│      ↑             (bash + text_editor tools)    │     │
-│      └──────────── Iterate until tests pass ────┘      │
-│                                                        │
-│  [AGENTS.md / CLAUDE.md injects: coding style,         │
-│   test commands, forbidden patterns,                   │
-│   architecture decisions]                              │
-└────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    subgraph LOOP["Agentic coding loop"]
+        U["Understand"] --> P["Plan"] --> I["Implement<br>bash + text_editor tools"] --> RT["Run tests"] --> FX["Fix"]
+        FX -->|"iterate until tests pass"| U
+    end
+    MAN["AGENTS.md / CLAUDE.md<br>coding style, test commands,<br>forbidden patterns, architecture decisions"] -. injects .-> LOOP
 ```
 
 **When to use which tool:**
@@ -181,10 +169,11 @@ Input → Validate → Sanitize → LLM → Filter → Validate → Output
 | **Prompt Compression** | 10-30% | Quality risk |
 | **Batch / Flex Tier** | 50% | Latency (async or best-effort) |
 
-```
-Query → Classify → Route → [Small Model] or [Large Model]
-                      ↓
-              [Cheap: 80%]  [Expensive: 20%]
+```mermaid
+flowchart LR
+    Q["Query"] --> C["Classify"] --> R{"Route"}
+    R -->|"cheap: 80%"| S["Small model"]
+    R -->|"expensive: 20%"| L["Large model"]
 ```
 
 ---

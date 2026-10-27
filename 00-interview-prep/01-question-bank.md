@@ -535,10 +535,9 @@ stateDiagram-v2
 
 **Autonomy spectrum:**
 
-```
-Workflows ←------------------------→ Agents
-                                     
-Single prompt → Chain → Router → ReAct → Multi-agent → Fully autonomous
+```mermaid
+flowchart LR
+    A["Single prompt<br>workflow end"] --> B["Chain"] --> C["Router"] --> D["ReAct"] --> E["Multi-agent"] --> G["Fully autonomous<br>agent end"]
 ```
 
 **Key insight:** Most production systems are workflows with agentic components, not fully autonomous agents. Start with workflows, add agency where needed.
@@ -860,26 +859,13 @@ result = app.invoke(input, config)
 
 **Example: Customer support agent**
 
-```
-┌─────────────┐
-│   Intake    │ ← Initial classification
-└─────┬───────┘
-      ↓
-┌─────────────┐
-│  Research   │ ← RAG retrieval
-└─────┬───────┘
-      ↓
-┌─────────────┐     ┌─────────────┐
-│  Can Answer │──No→│  Escalate   │
-└─────┬───────┘     └─────────────┘
-      ↓ Yes
-┌─────────────┐
-│  Respond    │
-└─────┬───────┘
-      ↓
-┌─────────────┐
-│  Confirm    │ ← User satisfied?
-└─────────────┘
+```mermaid
+flowchart TD
+    I["Intake<br>initial classification"] --> R["Research<br>RAG retrieval"]
+    R --> C{"Can answer?"}
+    C -->|No| E["Escalate"]
+    C -->|Yes| RS["Respond"]
+    RS --> CF["Confirm<br>user satisfied?"]
 ```
 
 **Why it works:**
@@ -2005,20 +1991,14 @@ These use LLM-as-judge, so no manual labeling needed.
 
 **My evaluation pipeline:**
 
-```
-Change proposed
-    ↓
-Run golden set (regression detection)
-    ↓
-Run evaluation suite (quality metrics)
-    ↓
-Check quality gates (faithfulness > 0.85, etc.)
-    ↓
-Canary deployment (5% traffic)
-    ↓
-Monitor production metrics
-    ↓
-Full rollout or rollback
+```mermaid
+flowchart TD
+    A["Change proposed"] --> B["Run golden set<br>regression detection"]
+    B --> C["Run evaluation suite<br>quality metrics"]
+    C --> D["Check quality gates<br>faithfulness #gt; 0.85, etc."]
+    D --> E["Canary deployment<br>5% traffic"]
+    E --> G["Monitor production metrics"]
+    G --> H["Full rollout or rollback"]
 ```
 
 The key is automation. Every change runs through this pipeline before reaching users."
@@ -3431,15 +3411,14 @@ MCP tool calls often contain sensitive parameters (user data, credentials). Miti
 
 **Architecture:**
 
+```mermaid
+flowchart TD
+    Q["Incoming query"] --> E["Lightweight embedding model<br>e.g., text-embedding-3-small"]
+    E --> S["Similarity search against cluster centroids"]
+    S --> R["Route to appropriate model tier"]
 ```
-Incoming query
-    ↓
-[Lightweight embedding model] (e.g., text-embedding-3-small)
-    ↓
-[Similarity search against cluster centroids]
-    ↓
-Route to appropriate model tier
 
+```
 Tier A (simple): GPT-6 Luna ($0.10/1M), Gemini 3.1 Flash-Lite ($0.25/1M) or DeepSeek V4.1-Flash ($0.30/1M at peak) - factual Q&A, extraction
 Tier B (complex): Claude Sonnet 5.5 or GPT-6.1 Sol ($2/1M) - reasoning, code review
 Tier C (reasoning): Claude Opus 5.5 ($4/1M) - math, logic problems
@@ -3606,14 +3585,15 @@ For reasoning capability (math-heavy algorithms, competitive programming) use Li
 
 **The core pattern: Active-active primary with fallback chain**
 
+```mermaid
+flowchart TD
+    REQ["Request"] --> SR{"Smart router"}
+    SR -->|"70% traffic"| P["Primary: Claude Sonnet 5.5"]
+    SR -->|"25% traffic, validates primary"| S["Secondary: GPT-6.1 Sol"]
+    SR -->|"5%, emergency"| FB["Fallback: Gemini 3.8 Flash"]
 ```
-Request
-    ↓
-[Smart Router]
-    ├── Primary: Claude Sonnet 5.5 (70% traffic)
-    ├── Secondary: GPT-6.1 Sol (25% traffic, validates primary)
-    └── Fallback: Gemini 3.8 Flash (5%, emergency)
 
+```
 Health check every 30s:
 - P95 latency > 5s → reduce traffic share
 - Error rate > 2% → failover
@@ -5100,10 +5080,11 @@ MCP gives the agent a database connection; a skill teaches it our runbook for us
 
 **Policy engine design:**
 
-```
-Request → Classifier (intent, complexity, risk) → Policy lookup → Provider call
-            ↑                                          |
-            └────────── outcome feedback ──────────────┘
+```mermaid
+flowchart LR
+    REQ["Request"] --> C["Classifier<br>intent, complexity, risk"]
+    C --> P["Policy lookup"] --> PC["Provider call"]
+    PC -. "outcome feedback" .-> C
 ```
 
 - **Tier 0 (under $0.30/1M):** DeepSeek V4 Flash for classification, extraction, and cache-friendly RAG. The 98% cache-hit discount means shared-prefix workloads are nearly free.
