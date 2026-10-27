@@ -57,38 +57,23 @@ Design a RAG-based knowledge assistant for a large enterprise with the following
 
 #### High-Level Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                          DATA PLANE                                      │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────────────────────┐│
-│  │   Connectors │───▶│   Processor  │───▶│       Vector Database        ││
-│  │ (SP,GD,Conf) │    │ (chunk,embed)│    │  (Pinecone/Qdrant/Weaviate)  ││
-│  └──────────────┘    └──────────────┘    └──────────────────────────────┘│
-│                                                      ▲                   │
-│                                                      │ sync              │
-│  ┌──────────────────────────────────────────────────┼───────────────────┐│
-│  │                    Permission Service            │                   ││
-│  └──────────────────────────────────────────────────┼───────────────────┘│
-└─────────────────────────────────────────────────────┼───────────────────┘
-                                                      │
-┌─────────────────────────────────────────────────────┼───────────────────┐
-│                          QUERY PLANE                │                   │
-│  ┌──────────────┐    ┌──────────────┐    ┌─────────┴──────┐             │
-│  │    User      │───▶│  Query API   │───▶│   Retriever    │             │
-│  │  Interface   │    │              │    │ (+ perm filter)│             │
-│  └──────────────┘    └──────────────┘    └────────┬───────┘             │
-│                             │                      │                     │
-│                             ▼                      ▼                     │
-│                      ┌──────────────┐    ┌──────────────┐               │
-│                      │   Reranker   │◀───│   Chunks     │               │
-│                      └──────┬───────┘    └──────────────┘               │
-│                             │                                            │
-│                             ▼                                            │
-│                      ┌──────────────┐    ┌──────────────┐               │
-│                      │  Generator   │───▶│   Response   │               │
-│                      │    (LLM)     │    │  + Citations │               │
-│                      └──────────────┘    └──────────────┘               │
-└─────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph DP["Data plane"]
+        CON["Connectors<br>SharePoint, Google Drive, Confluence"] --> PROC["Processor<br>chunk, embed"]
+        PROC --> VDB[("Vector database<br>Pinecone, Qdrant or Weaviate")]
+        PERM["Permission service"] -- sync --> VDB
+    end
+    subgraph QP["Query plane"]
+        UI["User interface"] --> API["Query API"]
+        API --> RET["Retriever<br>+ permission filter"]
+        RET --> CH["Chunks"]
+        API --> RR["Reranker"]
+        CH --> RR
+        RR --> GEN["Generator (LLM)"]
+        GEN --> RESP["Response + citations"]
+    end
+    VDB --> RET
 ```
 
 #### Data Pipeline Deep Dive
@@ -348,26 +333,16 @@ Design an AI-powered customer support system for an e-commerce company:
 **Key Architectural Decisions:**
 
 1. **Agent Architecture with Flow Control:**
-```
-┌─────────────────────────────────────────────────────────┐
-│                                                         │
-│   ┌─────────┐     ┌─────────────┐     ┌─────────────┐   │
-│   │ Intake  │────▶│  Classify   │────▶│   Router    │   │
-│   └─────────┘     └─────────────┘     └──────┬──────┘   │
-│                                              │           │
-│         ┌────────────────┬──────────────────┼───────┐   │
-│         ▼                ▼                  ▼       ▼   │
-│   ┌───────────┐   ┌───────────┐   ┌───────────┐ ┌─────┐ │
-│   │Order Flow │   │Product Q&A│   │ Returns   │ │Human│ │
-│   └─────┬─────┘   └─────┬─────┘   └─────┬─────┘ └─────┘ │
-│         │               │               │               │
-│         └───────────────┴───────────────┘               │
-│                         │                               │
-│                   ┌─────▼─────┐                         │
-│                   │  Response │                         │
-│                   │ Generator │                         │
-│                   └───────────┘                         │
-└─────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    I["Intake"] --> C["Classify"] --> R{"Router"}
+    R --> O["Order flow"]
+    R --> P["Product Q&A"]
+    R --> RT["Returns"]
+    R --> H["Human"]
+    O --> G["Response generator"]
+    P --> G
+    RT --> G
 ```
 
 2. **Tool Design:**
@@ -546,16 +521,12 @@ Design a document processing pipeline for financial services:
 
 **Pipeline Architecture:**
 
-```
-┌────────┐   ┌───────────┐   ┌────────────┐   ┌────────────┐
-│ Ingest │──▶│ Classify  │──▶│  Extract   │──▶│  Validate  │
-└────────┘   └───────────┘   └────────────┘   └────────────┘
-                                                     │
-                                     ┌───────────────┼───────────────┐
-                                     ▼               ▼               ▼
-                              ┌──────────┐   ┌──────────┐   ┌──────────┐
-                              │ Auto-pass│   │  Review  │   │  Reject  │
-                              └──────────┘   └──────────┘   └──────────┘
+```mermaid
+flowchart LR
+    A["Ingest"] --> B["Classify"] --> C["Extract"] --> D{"Validate"}
+    D --> E["Auto-pass"]
+    D --> F["Review"]
+    D --> G["Reject"]
 ```
 
 **Key Components:**
@@ -652,28 +623,11 @@ Design a content moderation system for a social platform:
 
 **Architecture Pattern: Multi-Stage Cascade**
 
-```
-         ┌───────────────────────────────────────────┐
-         │              Fast Filters                 │
-         │   (regex, blocklist, hash matching)       │
-         └─────────────────┬─────────────────────────┘
-                           │ Pass 95%
-                           ▼
-         ┌───────────────────────────────────────────┐
-         │            ML Classifiers                 │
-         │   (text: BERT, image: CLIP, video: X3D)   │
-         └─────────────────┬─────────────────────────┘
-                           │ Uncertain 5%
-                           ▼
-         ┌───────────────────────────────────────────┐
-         │            LLM Analysis                   │
-         │   (context-aware, nuanced decisions)      │
-         └─────────────────┬─────────────────────────┘
-                           │ Still uncertain 0.5%
-                           ▼
-         ┌───────────────────────────────────────────┐
-         │            Human Review                   │
-         └───────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    A["Fast filters<br>regex, blocklist, hash matching"] -->|"Pass 95%"| B["ML classifiers<br>text: BERT, image: CLIP, video: X3D"]
+    B -->|"Uncertain 5%"| C["LLM analysis<br>context-aware, nuanced decisions"]
+    C -->|"Still uncertain 0.5%"| D["Human review"]
 ```
 
 **Key Design Decisions:**
@@ -750,34 +704,16 @@ Design a multi-tenant AI platform (AI-as-a-Service):
 
 **Tenant Isolation Architecture:**
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         API Gateway                              │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │   Auth → Tenant Context → Rate Limit → Route             │   │
-│  └──────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-                               │
-                               ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    Tenant-Aware Service Layer                    │
-│                                                                  │
-│  All operations scoped to tenant_id from context                │
-│  - Retrieval filters by tenant                                  │
-│  - Cache keys prefixed by tenant                                │
-│  - Audit logs include tenant                                    │
-└─────────────────────────────────────────────────────────────────┘
-                               │
-           ┌───────────────────┼───────────────────┐
-           ▼                   ▼                   ▼
-┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│  Shared Vector  │ │  Shared LLM     │ │  Shared Object  │
-│  DB (filtered)  │ │  (no tenant     │ │  Storage        │
-│                 │ │   data in prompt│ │  (tenant paths) │
-│  tenant_id in   │ │   history)      │ │                 │
-│  all metadata   │ │                 │ │  s3://bucket/   │
-└─────────────────┘ └─────────────────┘ │  {tenant_id}/   │
-                                        └─────────────────┘
+```mermaid
+flowchart TD
+    subgraph GW["API gateway"]
+        direction LR
+        AU["Auth"] --> TC["Tenant context"] --> RL["Rate limit"] --> RO["Route"]
+    end
+    GW --> SL["Tenant-aware service layer<br>All operations scoped to tenant_id from context:<br>retrieval filters by tenant, cache keys prefixed by tenant,<br>audit logs include tenant"]
+    SL --> V[("Shared vector DB, filtered<br>tenant_id in all metadata")]
+    SL --> L["Shared LLM<br>no tenant data in prompt history"]
+    SL --> S[("Shared object storage<br>tenant paths: s3://bucket/{tenant_id}/")]
 ```
 
 **Critical Isolation Points:**
@@ -869,27 +805,10 @@ At 100ms latency, need:
 
 **Architecture:**
 
-```
-┌────────────────────────────────────────────────────────────┐
-│                         CDN/Edge                            │
-│              (Cache popular queries: ~30% hit)              │
-└─────────────────────────────┬──────────────────────────────┘
-                              │
-┌─────────────────────────────▼──────────────────────────────┐
-│                      Query Service                          │
-│  1. Embed query (cached embeddings for common queries)      │
-│  2. Retrieve candidates (ANN search)                        │
-│  3. Apply filters (post-filter or hybrid)                   │
-│  4. Personalize ranking                                     │
-│  5. Return results                                          │
-└─────────────────────────────┬──────────────────────────────┘
-                              │
-┌─────────────────────────────▼──────────────────────────────┐
-│                    Vector Database Cluster                  │
-│  - Sharded by category (reduce search space)                │
-│  - HNSW index with ef_search tuned for speed                │
-│  - Metadata filtering with roaring bitmaps                  │
-└────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    E["CDN/edge<br>cache popular queries: ~30% hit"] --> Q["Query service<br>1. Embed query (cached embeddings for common queries)<br>2. Retrieve candidates (ANN search)<br>3. Apply filters (post-filter or hybrid)<br>4. Personalize ranking<br>5. Return results"]
+    Q --> V[("Vector database cluster<br>sharded by category to reduce search space<br>HNSW index with ef_search tuned for speed<br>metadata filtering with roaring bitmaps")]
 ```
 
 **Latency Budget:**
@@ -970,24 +889,24 @@ Reindexing (description changes):
 
 **High-level architecture:**
 
-```
-                    ┌────────────────────────────────────────────┐
-                    │              EVAL PIPELINE                  │
-                    │                                             │
-  Prompt/model PR ──► CI runner ── dev set (visible, ~200 cases) │
-                    │     │                                       │
-                    │     ├── held-out set (CI-only, ~300 cases,  │
-                    │     │    rotated quarterly)                  │
-                    │     │                                       │
-                    │     └── gate: pass/fail vs baseline ──► merge│
-                    │                                             │
-  Production ──────► sampler (1-5% of traffic)                   │
-                    │     │                                       │
-                    │     ├── LLM-judge scoring (async, cheap)    │
-                    │     ├── human-graded slice (weekly, ~100)   │
-                    │     └── outcome metrics (thumbs, escalation)│
-                    │                                             │
-                    └──── dashboards + regression alerts ─────────┘
+```mermaid
+flowchart TD
+    PR["Prompt or model PR"] --> CI
+    PROD["Production"] --> SM
+    subgraph EP["Eval pipeline"]
+        CI["CI runner"] --> DEV["Dev set<br>visible, ~200 cases"]
+        CI --> HO["Held-out set<br>CI only, ~300 cases, rotated quarterly"]
+        DEV --> GATE{"Gate: pass/fail<br>vs baseline"}
+        HO --> GATE
+        SM["Sampler<br>1-5% of traffic"] --> J["LLM-judge scoring<br>async, cheap"]
+        SM --> HG["Human-graded slice<br>weekly, ~100"]
+        SM --> OM["Outcome metrics<br>thumbs, escalation"]
+        GATE --> DB["Dashboards + regression alerts"]
+        J --> DB
+        HG --> DB
+        OM --> DB
+    end
+    GATE -->|pass| M["Merge"]
 ```
 
 **1. Dataset strategy (the part most candidates skip):**
@@ -1076,24 +995,13 @@ Keep datasets, rubrics, judge prompts and gate thresholds in your own repo, and 
 
 **The memory hierarchy:**
 
-```
-┌──────────────────────────────────────────────────────────┐
-│ L1 Working memory: the context window                     │
-│   Current session, tool results, scratchpad               │
-│   Managed by compaction + just-in-time loading            │
-├──────────────────────────────────────────────────────────┤
-│ L2 Episodic memory: what happened                         │
-│   Past session summaries, trajectories, outcomes          │
-│   Store: vector DB, retrieved by similarity + recency     │
-├──────────────────────────────────────────────────────────┤
-│ L3 Semantic memory: what is true                          │
-│   Extracted facts and preferences with provenance         │
-│   Store: structured records or knowledge graph            │
-├──────────────────────────────────────────────────────────┤
-│ L4 Procedural memory: how to do things                    │
-│   Learned workflows, per-user playbooks (skills)          │
-│   Store: versioned files, loaded on demand                │
-└──────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    L1["L1 Working memory: the context window<br>Current session, tool results, scratchpad<br>Managed by compaction + just-in-time loading"]
+    L2[("L2 Episodic memory: what happened<br>Past session summaries, trajectories, outcomes<br>Store: vector DB, retrieved by similarity + recency")]
+    L3[("L3 Semantic memory: what is true<br>Extracted facts and preferences with provenance<br>Store: structured records or knowledge graph")]
+    L4["L4 Procedural memory: how to do things<br>Learned workflows, per-user playbooks (skills)<br>Store: versioned files, loaded on demand"]
+    L1 ~~~ L2 ~~~ L3 ~~~ L4
 ```
 
 **1. In-session (L1): context engineering, not storage.**
@@ -1101,22 +1009,15 @@ Compaction at a window threshold (summarize history, keep recent artifacts), jus
 
 **2. Write path (the hard part):**
 
-```
-Session ends (or hits checkpoint)
-    │
-    ├── Summarize episode → L2 (embedding + metadata:
-    │     timestamp, topics, outcome, sentiment)
-    │
-    └── Fact extraction pass → candidate facts
-          │
-          ├── Deduplicate against existing L3
-          ├── Conflict check: contradicts a stored fact?
-          │     ├── Newer + higher confidence → supersede (keep old
-          │     │     version with valid_to timestamp)
-          │     └── Ambiguous → store as candidate, confirm with
-          │           user at next natural opportunity
-          └── Importance filter: discard chit-chat, keep
-                preferences, commitments, corrections
+```mermaid
+flowchart TD
+    S["Session ends<br>or hits checkpoint"] --> SUM["Summarize episode → L2<br>embedding + metadata:<br>timestamp, topics, outcome, sentiment"]
+    S --> FX["Fact extraction pass<br>→ candidate facts"]
+    FX --> DD["Deduplicate against existing L3"]
+    FX --> CC{"Conflict check:<br>contradicts a stored fact?"}
+    FX --> IF["Importance filter<br>discard chit-chat, keep preferences,<br>commitments, corrections"]
+    CC -->|"Newer + higher confidence"| SUP["Supersede<br>keep old version with valid_to timestamp"]
+    CC -->|"Ambiguous"| CAND["Store as candidate<br>confirm with user at next natural opportunity"]
 ```
 
 The conflict path matters most: "user moved from Madrid to Lisbon" must supersede, not coexist. Bitemporal records (valid_from, valid_to) make supersession auditable and reversible.
@@ -1191,29 +1092,15 @@ Autoregressive generation:
 
 **2. Architecture:**
 
-```
-Client ──► API (auth, validation, max_tokens cap)
-              │
-              ▼
-        Admission control ── 429 + Retry-After when the queue is full
-              │
-              ▼
-        Request queue (priority, deadline)
-              │
-              ▼
-        Scheduler (runs every step)
-          - admit while slots < 100 AND free KV blocks suffice
-          - chunked prefill: split long prompts so they do not
-            stall in-flight decodes
-          - on KV pressure, preempt the lowest priority sequence
-            (swap to host memory or recompute later)
-              │
-              ▼
-        GPU worker: one forward pass per step over the mixed batch
-              │
-              ▼
-        Detokenize and stream tokens back (SSE); free KV blocks on
-        completion or client disconnect
+```mermaid
+flowchart TD
+    C["Client"] --> API["API<br>auth, validation, max_tokens cap"]
+    API --> AC{"Admission control"}
+    AC -->|"queue full"| R429["429 + Retry-After"]
+    AC --> Q["Request queue<br>priority, deadline"]
+    Q --> S["Scheduler, runs every step<br>admit while slots #lt; 100 AND free KV blocks suffice<br>chunked prefill: split long prompts so they<br>do not stall in-flight decodes<br>on KV pressure, preempt the lowest priority sequence<br>(swap to host memory or recompute later)"]
+    S --> W["GPU worker<br>one forward pass per step over the mixed batch"]
+    W --> D["Detokenize and stream tokens back (SSE)<br>free KV blocks on completion or client disconnect"]
 ```
 
 **3. The binding constraint is KV memory, not the 100-slot cap:**
@@ -1307,31 +1194,17 @@ Naming the two deep dives yourself, and saying why, is the clearest Lead-level s
 
 **1. Architecture: data and control stay local; heavy compute and third-party services are remote.**
 
-```
-┌─────────────────────────── Device ───────────────────────────┐
-│ Assistant UI: chat, confirmation cards, receipts             │
-│      │                                                       │
-│      ▼                                                       │
-│ Orchestrator (code) ──► Small local model (intent, tools)    │
-│      │                                                       │
-│      ├──► MCP host                                           │
-│      │      local stdio servers: files, PDF parsing, OCR     │
-│      │      remote clients: mail, calendar, web search       │
-│      │      OAuth tokens in the device keychain              │
-│      │                                                       │
-│      ├──► Local stores (encrypted SQLite): chat history,     │
-│      │      memory, file index, action outbox, audit log     │
-│      │                                                       │
-│      └──► Cloud gateway (minimized context only)             │
-└──────────────────────────────────────────────────────────────┘
-       │ Streamable HTTP + OAuth 2.1     │ HTTPS
-       ▼                                 ▼
-┌──────────────────────────┐   ┌──────────────────────────────┐
-│ Remote MCP servers       │   │ Cloud model tier (stateless) │
-│ mail, calendar, search   │   │ mid model: planning, summary │
-│ from a curated registry  │   │ large model: contracts       │
-└──────────────────────────┘   │ keeps no user data           │
-                               └──────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph DEV["Device"]
+        UI["Assistant UI<br>chat, confirmation cards, receipts"] --> ORC["Orchestrator (code)"]
+        ORC --> LM["Small local model<br>intent, tools"]
+        ORC --> MCP["MCP host<br>local stdio servers: files, PDF parsing, OCR<br>remote clients: mail, calendar, web search<br>OAuth tokens in the device keychain"]
+        ORC --> ST[("Local stores, encrypted SQLite<br>chat history, memory, file index,<br>action outbox, audit log")]
+        ORC --> GWY["Cloud gateway<br>minimized context only"]
+    end
+    MCP -->|"Streamable HTTP + OAuth 2.1"| RMCP["Remote MCP servers<br>mail, calendar, search<br>from a curated registry"]
+    GWY -->|"HTTPS"| CLOUD["Cloud model tier, stateless<br>mid model: planning, summary<br>large model: contracts<br>keeps no user data"]
 ```
 
 The cloud tier runs inference and keeps nothing. The device is the source of truth for history and memory, synced end to end encrypted across the user's devices.

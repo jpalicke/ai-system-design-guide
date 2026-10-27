@@ -30,6 +30,7 @@ For small fixes (typos, broken links, stale numbers), a direct PR is perfect. Fo
 - **Conventional commits.** Use messages like `docs: fix broken links in case studies` or `feat(retrieval): add ColBERT reranking notes`, scoped to one logical change each.
 - **Match the surrounding voice.** Opinionated, concrete, and tradeoff-aware. Prefer specific numbers and named tools over vendor-neutral hedging.
 - **Keep links relative** and verify they resolve before opening a PR.
+- **Use Mermaid for diagrams.** Draw architecture, flow, and sequence diagrams in fenced ` ```mermaid ` blocks so GitHub renders them, and check that each block renders before opening a PR. Keep plain text code blocks for latency budgets, capacity math, timelines, and step lists, where alignment carries the meaning.
 
 ## Quality bar
 
