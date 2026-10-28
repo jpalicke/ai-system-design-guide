@@ -345,27 +345,24 @@ Provide your final answer.
 
 Layered architecture where multiple models feed into aggregators:
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    MIXTURE OF AGENTS (MoA)                       │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  Layer 1 (Proposers):                                           │
-│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐            │
-│  │ Claude  │  │  GPT-6  │  │ Gemini  │  │ Llama   │            │
-│  └────┬────┘  └────┬────┘  └────┬────┘  └────┬────┘            │
-│       │            │            │            │                   │
-│       └────────────┴─────┬──────┴────────────┘                  │
-│                          │                                       │
-│  Layer 2 (Aggregator):   ▼                                      │
-│  ┌──────────────────────────────────────────────────┐           │
-│  │  "Given these perspectives: [R1, R2, R3, R4]    │           │
-│  │   Synthesize the best answer..."                │           │
-│  └────────────────────────┬─────────────────────────┘           │
-│                           │                                      │
-│                           ▼                                      │
-│                    [Final Output]                                │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph MOA["MIXTURE OF AGENTS (MoA)"]
+        subgraph P["Layer 1 (Proposers)"]
+            A["Claude"]
+            B["GPT-6"]
+            C["Gemini"]
+            D["Llama"]
+        end
+        subgraph AG["Layer 2 (Aggregator)"]
+            S["'Given these perspectives: [R1, R2, R3, R4]<br>Synthesize the best answer...'"]
+        end
+        A --> S
+        B --> S
+        C --> S
+        D --> S
+        S --> F["Final Output"]
+    end
 ```
 
 ```python
@@ -434,16 +431,14 @@ The cascade is only as good as its gate. If the gate is a judge from the same fa
 
 ### Decision Framework
 
-```
-Is there a single "correct" answer format?
-├── Yes (classification, math)
-│   └── Use Ensemble (voting/averaging)
-│
-└── No (creative writing, open QA)
-    └── Use Arbitration (best-of-N)
-        └── Do you have reliable scoring?
-            ├── Yes → Reward model selection
-            └── No → LLM-as-judge or human
+```mermaid
+flowchart TD
+    Q{"Is there a single 'correct' answer format?"}
+    Q -->|"Yes (classification, math)"| E["Use Ensemble<br>(voting/averaging)"]
+    Q -->|"No (creative writing, open QA)"| A["Use Arbitration<br>(best-of-N)"]
+    A --> S{"Do you have reliable scoring?"}
+    S -->|"Yes"| RM["Reward model selection"]
+    S -->|"No"| J["LLM-as-judge or human"]
 ```
 
 ---

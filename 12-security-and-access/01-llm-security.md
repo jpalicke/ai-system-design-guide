@@ -469,61 +469,15 @@ class SecureToolExecutor:
 
 ### Layered Security Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    User Request                                 │
-└─────────────────────────────┬───────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ Layer 1: Input Validation                                       │
-│ - Rate limiting                                                 │
-│ - Input length limits                                           │
-│ - Basic sanitization                                            │
-└─────────────────────────────┬───────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ Layer 2: Input Classification                                   │
-│ - Detect injection attempts                                     │
-│ - Classify intent                                               │
-│ - Flag suspicious patterns                                      │
-└─────────────────────────────┬───────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ Layer 3: Context Security                                       │
-│ - Permission-based retrieval                                    │
-│ - Data access controls                                          │
-│ - Content sanitization                                          │
-└─────────────────────────────┬───────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ Layer 4: LLM Generation                                         │
-│ - Secure system prompts                                         │
-│ - Instruction hierarchy                                         │
-│ - Safety guardrails                                             │
-└─────────────────────────────┬───────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ Layer 5: Output Validation                                      │
-│ - Content filtering                                             │
-│ - PII detection                                                 │
-│ - System prompt leak detection                                  │
-└─────────────────────────────┬───────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ Layer 6: Safe Output Handling                                   │
-│ - No direct execution                                           │
-│ - Parameterized operations                                      │
-│ - Escaped rendering                                             │
-└─────────────────────────────┬───────────────────────────────────┘
-                              │
-                              ▼
-                         Response to User
+```mermaid
+flowchart TD
+    U["User Request"] --> L1
+    L1["Layer 1: Input Validation<br>- Rate limiting<br>- Input length limits<br>- Basic sanitization"] --> L2
+    L2["Layer 2: Input Classification<br>- Detect injection attempts<br>- Classify intent<br>- Flag suspicious patterns"] --> L3
+    L3["Layer 3: Context Security<br>- Permission-based retrieval<br>- Data access controls<br>- Content sanitization"] --> L4
+    L4["Layer 4: LLM Generation<br>- Secure system prompts<br>- Instruction hierarchy<br>- Safety guardrails"] --> L5
+    L5["Layer 5: Output Validation<br>- Content filtering<br>- PII detection<br>- System prompt leak detection"] --> L6
+    L6["Layer 6: Safe Output Handling<br>- No direct execution<br>- Parameterized operations<br>- Escaped rendering"] --> R["Response to User"]
 ```
 
 ### Implementation

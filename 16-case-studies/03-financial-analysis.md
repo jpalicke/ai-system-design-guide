@@ -59,27 +59,15 @@ This case study covers designing a high-reliability AI system for generating equ
 
 ### High-Level Pipeline
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│               FINANCIAL ANALYSIS PIPELINE                        │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  Stage 1: Data Extraction (Self-Consistency k=5)                │
-│  └── Extract key metrics from filings with majority vote        │
-│                                                                  │
-│  Stage 2: Analysis Generation (Mixture of Agents)               │
-│  ├── Model A: Quantitative analysis focus                       │
-│  ├── Model B: Qualitative/narrative focus                       │
-│  ├── Model C: Risk factor analysis                              │
-│  └── Aggregator: Synthesize into coherent report                │
-│                                                                  │
-│  Stage 3: Fact Verification (Multi-Agent Debate)                │
-│  └── 3 models debate each factual claim, flag disagreements     │
-│                                                                  │
-│  Stage 4: Final Review (Panel of Judges)                        │
-│  └── Quality score determines auto-publish vs human review      │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph FAP["FINANCIAL ANALYSIS PIPELINE"]
+        S1["Stage 1: Data Extraction (Self-Consistency k=5)<br>Extract key metrics from filings with majority vote"]
+        S2["Stage 2: Analysis Generation (Mixture of Agents)<br>Model A: Quantitative analysis focus<br>Model B: Qualitative/narrative focus<br>Model C: Risk factor analysis<br>Aggregator: Synthesize into coherent report"]
+        S3["Stage 3: Fact Verification (Multi-Agent Debate)<br>3 models debate each factual claim, flag disagreements"]
+        S4["Stage 4: Final Review (Panel of Judges)<br>Quality score determines auto-publish vs human review"]
+        S1 --> S2 --> S3 --> S4
+    end
 ```
 
 The pipeline as a flow. Each stage uses a different model class on purpose: extraction wants multimodal (charts and tables), generation wants narrative quality, audit wants reasoning depth, panel wants cheap-but-many for diversity:
@@ -96,56 +84,18 @@ flowchart LR
 
 ### Data Flow
 
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   10-K/Q    │     │  Earnings   │     │  Analyst    │
-│   Filings   │     │  Calls      │     │  Reports    │
-└──────┬──────┘     └──────┬──────┘     └──────┬──────┘
-       │                   │                   │
-       └───────────────────┴───────────────────┘
-                           │
-                           ▼
-                   ┌───────────────┐
-                   │     Data      │
-                   │   Ingestion   │
-                   └───────┬───────┘
-                           │
-                           ▼
-                   ┌───────────────┐
-                   │   Extraction  │
-                   │  (k=5 SC)     │
-                   └───────┬───────┘
-                           │
-                           ▼
-              ┌────────────┴────────────┐
-              │    Structured Data      │
-              │    (verified metrics)   │
-              └────────────┬────────────┘
-                           │
-                           ▼
-                   ┌───────────────┐
-                   │    MoA        │
-                   │  Generation   │
-                   └───────┬───────┘
-                           │
-                           ▼
-                   ┌───────────────┐
-                   │    Debate     │
-                   │  Verification │
-                   └───────┬───────┘
-                           │
-                           ▼
-                   ┌───────────────┐
-                   │    Panel      │
-                   │    Review     │
-                   └───────┬───────┘
-                           │
-               ┌───────────┴───────────┐
-               ▼                       ▼
-        ┌─────────────┐         ┌─────────────┐
-        │ Auto-Publish│         │Human Review │
-        │ (high conf) │         │ (low conf)  │
-        └─────────────┘         └─────────────┘
+```mermaid
+flowchart TD
+    F["10-K/Q<br>Filings"] --> DI
+    EC["Earnings<br>Calls"] --> DI
+    AR["Analyst<br>Reports"] --> DI
+    DI["Data<br>Ingestion"] --> EX["Extraction<br>(k=5 SC)"]
+    EX --> SD["Structured Data<br>(verified metrics)"]
+    SD --> MOA["MoA<br>Generation"]
+    MOA --> DV["Debate<br>Verification"]
+    DV --> PR["Panel<br>Review"]
+    PR --> AP["Auto-Publish<br>(high conf)"]
+    PR --> HR["Human Review<br>(low conf)"]
 ```
 
 The data lineage in Mermaid, showing how three input sources converge into one verified output:

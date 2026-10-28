@@ -349,29 +349,14 @@ Claude Computer Use is an Anthropic API feature that allows Claude to control a 
 
 ### The Vision-Action Loop
 
-```
-+-------------------------------------------------------------------+
-|              Claude Computer Use: Vision-Action Loop               |
-+-------------------------------------------------------------------+
-|                                                                   |
-|  Step 1: OBSERVE          Step 2: REASON          Step 3: ACT    |
-|  +----------------+       +----------------+      +------------+ |
-|  |  Take          |       |  Analyze       |      |  Execute   | |
-|  |  Screenshot    |------>|  Screenshot    |----->|  Action    | |
-|  |  (base64 PNG)  |       |  + Task Goal   |      |  (click,   | |
-|  |                |       |  + History      |      |  type,     | |
-|  +----------------+       +----------------+      |  scroll)   | |
-|                                                    +------+-----+ |
-|                                                           |       |
-|          +------------------------------------------------+       |
-|          |                                                        |
-|          v                                                        |
-|  +-------+--------+                                               |
-|  |  Wait + Take   |                                               |
-|  |  New Screenshot|-------> (Loop back to Step 1)                 |
-|  +----------------+                                               |
-|                                                                   |
-+-------------------------------------------------------------------+
+```mermaid
+flowchart TD
+    subgraph LOOP["Claude Computer Use: Vision-Action Loop"]
+        S1["Step 1: OBSERVE<br>Take Screenshot<br>(base64 PNG)"] --> S2["Step 2: REASON<br>Analyze Screenshot<br>+ Task Goal<br>+ History"]
+        S2 --> S3["Step 3: ACT<br>Execute Action<br>(click, type, scroll)"]
+        S3 --> W["Wait + Take<br>New Screenshot"]
+        W -. "Loop back to Step 1" .-> S1
+    end
 ```
 
 ### Available Tools
@@ -503,26 +488,22 @@ Copilot now ships orchestration patterns that were paper ideas a year ago:
 
 ### IDE Agent Architecture Comparison
 
-```
-+-------------------------------------------------------------------+
-|                 IDE Agent Architecture Patterns                   |
-+-------------------------------------------------------------------+
-|                                                                   |
-|  Cursor:                                                          |
-|  [Editor] --> [Agent Mode] --> [Multi-file RL] --> [Apply Diffs]  |
-|                    |                                              |
-|                    +--> [Cloud Agent] --> [Cloud/own VM] --> [PR] |
-|                                                                   |
-|  Windsurf:                                                        |
-|  [Editor] --> [Cascade Agent] --> [RAG Codebase] --> [Apply Edits]|
-|                    |                                              |
-|                    +--> [SWE-1.5 Model] --> [Fast Context]        |
-|                                                                   |
-|  Cline:                                                           |
-|  [Editor] --> [Agent Loop] --> [Evaluate] --> [Self-Fix] --> [Act]|
-|                    |                                              |
-|                    +--> [Any LLM Provider] --> [Tool Calls]       |
-+-------------------------------------------------------------------+
+```mermaid
+flowchart LR
+    subgraph IDE["IDE Agent Architecture Patterns"]
+        subgraph CUR["Cursor"]
+            C1["Editor"] --> C2["Agent Mode"] --> C3["Multi-file RL"] --> C4["Apply Diffs"]
+            C2 --> C5["Cloud Agent"] --> C6["Cloud/own VM"] --> C7["PR"]
+        end
+        subgraph WIN["Windsurf"]
+            W1["Editor"] --> W2["Cascade Agent"] --> W3["RAG Codebase"] --> W4["Apply Edits"]
+            W2 --> W5["SWE-1.5 Model"] --> W6["Fast Context"]
+        end
+        subgraph CLI["Cline"]
+            L1["Editor"] --> L2["Agent Loop"] --> L3["Evaluate"] --> L4["Self-Fix"] --> L5["Act"]
+            L2 --> L6["Any LLM Provider"] --> L7["Tool Calls"]
+        end
+    end
 ```
 
 ---

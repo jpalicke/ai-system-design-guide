@@ -228,13 +228,11 @@ docker run -it --rm \
 ```
 
 **Architecture:**
-```
-Agent Canvas (web UI, automations: schedules, webhooks, Slack, GitHub, Linear)
-    ↓
-Agent Server (OpenHands SDK)
-    ├── OpenHands agent, or an ACP agent (Claude Code, Codex, Gemini)
-    └── Backend: local process, Docker (one container per conversation),
-        a VM, or OpenHands Cloud / Enterprise
+```mermaid
+flowchart TD
+    AC["Agent Canvas<br>(web UI, automations: schedules, webhooks, Slack, GitHub, Linear)"] --> AS["Agent Server (OpenHands SDK)"]
+    AS --> AG["OpenHands agent, or an ACP agent<br>(Claude Code, Codex, Gemini)"]
+    AS --> BK["Backend: local process, Docker (one container per conversation),<br>a VM, or OpenHands Cloud / Enterprise"]
 ```
 
 **Key features:**
@@ -265,14 +263,14 @@ aider --model claude-3-7-sonnet-20250219
 
 Open-source VS Code extension for autonomous coding, now at v4.1.22 with an SDK for embedding it elsewhere:
 
-```
-VS Code
-  └── Cline Extension
-        ├── Any model (Claude, GPT, Gemini, Ollama)
-        ├── File system access (read/write any file)
-        ├── Terminal (bash commands)
-        ├── Browser (playwright)
-        └── MCP servers (any MCP tool)
+```mermaid
+flowchart TD
+    VS["VS Code"] --> CL["Cline Extension"]
+    CL --> M1["Any model (Claude, GPT, Gemini, Ollama)"]
+    CL --> M2["File system access (read/write any file)"]
+    CL --> M3["Terminal (bash commands)"]
+    CL --> M4["Browser (playwright)"]
+    CL --> M5["MCP servers (any MCP tool)"]
 ```
 
 **Key differentiators:**
@@ -348,30 +346,27 @@ Both are retired as frontier signals: HumanEval is saturated, and Artificial Ana
 
 ### Quick Decision Tree
 
-```
-What is your primary need?
-
-├─ IDE coding assistance (completions + chat + agent)?
-│  ├─ Microsoft ecosystem / enterprise? → GitHub Copilot
-│  ├─ Want best quality and cloud agents? → Cursor
-│  └─ Want free + model choice? → Windsurf or Cline
-│
-├─ Autonomous agent for standalone coding tasks?
-│  ├─ Best quality, Claude models acceptable? → Claude Code
-│  ├─ OpenAI shop, or want an open-source CLI from a lab? → Codex CLI
-│  ├─ Need open source with any model? → OpenCode (terminal) or OpenHands (web UI)
-│  └─ VS Code embedded, MCP-native? → Cline
-│
-├─ Self-hosted model for custom deployment?
-│  ├─ Best quality? → MiMo-V2.6-Pro, GLM-5.3 or Kimi K3 (check licenses)
-│  ├─ One node? → GLM-5.3-Flash or MiMo-V2.6-Flash
-│  ├─ Single GPU, Apache 2.0? → Qwen3.8-27B or Granite 4.2 30B
-│  └─ Fast completions / edge? → Qwen2.5-Coder-1.5B/7B or StarCoder2-3B
-│
-└─ CI/CD pipeline integration?
-   ├─ Best results? → Claude Agent SDK or `claude -p` (headless), `codex exec`
-   ├─ Open-source? → OpenHands automations (webhook-triggered) or OpenCode
-   └─ Managed loop? → OpenAI Agents API or Claude Managed Agents (check residency and ZDR)
+```mermaid
+flowchart TD
+    ROOT["What is your primary need?"]
+    ROOT --> N1["IDE coding assistance<br>(completions + chat + agent)?"]
+    ROOT --> N2["Autonomous agent for standalone coding tasks?"]
+    ROOT --> N3["Self-hosted model for custom deployment?"]
+    ROOT --> N4["CI/CD pipeline integration?"]
+    N1 -->|"Microsoft ecosystem / enterprise?"| A1["GitHub Copilot"]
+    N1 -->|"Want best quality and cloud agents?"| A2["Cursor"]
+    N1 -->|"Want free + model choice?"| A3["Windsurf or Cline"]
+    N2 -->|"Best quality, Claude models acceptable?"| B1["Claude Code"]
+    N2 -->|"OpenAI shop, or want an open-source CLI from a lab?"| B2["Codex CLI"]
+    N2 -->|"Need open source with any model?"| B3["OpenCode (terminal) or OpenHands (web UI)"]
+    N2 -->|"VS Code embedded, MCP-native?"| B4["Cline"]
+    N3 -->|"Best quality?"| C1["MiMo-V2.6-Pro, GLM-5.3 or Kimi K3 (check licenses)"]
+    N3 -->|"One node?"| C2["GLM-5.3-Flash or MiMo-V2.6-Flash"]
+    N3 -->|"Single GPU, Apache 2.0?"| C3["Qwen3.8-27B or Granite 4.2 30B"]
+    N3 -->|"Fast completions / edge?"| C4["Qwen2.5-Coder-1.5B/7B or StarCoder2-3B"]
+    N4 -->|"Best results?"| D1["Claude Agent SDK or `claude -p` (headless), `codex exec`"]
+    N4 -->|"Open-source?"| D2["OpenHands automations (webhook-triggered) or OpenCode"]
+    N4 -->|"Managed loop?"| D3["OpenAI Agents API or Claude Managed Agents (check residency and ZDR)"]
 ```
 
 ### Comparison Matrix
@@ -395,45 +390,17 @@ What is your primary need?
 
 Here's how to build an internal AI coding platform. The 2026 shape is a **split plane**: the agent vendor (or your own orchestrator) runs planning and model calls, while execution, credentials and network egress stay inside your perimeter. Claude Code self-hosted runners, Cursor Self-hosted Machines, OpenAI Agents API self-hosted sandboxes and Copilot's local sandboxing all shipped between August and September 2026.
 
-```
-┌────────────────────────────────────────────────────────────┐
-│             ENTERPRISE CODING AGENT PLATFORM               │
-├────────────────────────────────────────────────────────────┤
-│                                                            │
-│  Developer                                                 │
-│     ↓ (Jira ticket / PR description)                       │
-│  ┌──────────────────────────────────┐                      │
-│  │        TASK INTAKE LAYER         │                      │
-│  │  • Parse task from Jira/GitHub   │                      │
-│  │  • Classify: simple/complex      │                      │
-│  │  • Route to model tier + budget  │                      │
-│  └──────────────┬───────────────────┘                      │
-│                 │                                          │
-│    Simple fix   │   Complex feature                        │
-│        ↓        │        ↓                                 │
-│  ┌──────────┐   │  ┌──────────────────┐                    │
-│  │ Mid-tier │   │  │ Frontier model,  │                    │
-│  │  model   │   └→ │ same harness     │                    │
-│  └────┬─────┘      └────────┬─────────┘                    │
-│       │                     │                              │
-│       └──────────┬──────────┘                              │
-│                  ↓                                         │
-│  ┌──────────────────────────────────┐                      │
-│  │   EXECUTION PLANE (your infra)   │                      │
-│  │  • Container/microVM per task    │                      │
-│  │  • Egress allowlist, no prod keys│                      │
-│  └──────────────┬───────────────────┘                      │
-│                 ↓                                          │
-│  ┌──────────────────────────────────┐                      │
-│  │         REVIEW LAYER             │                      │
-│  │  • Git diff → PR creation        │                      │
-│  │  • Auto-run CI tests             │                      │
-│  │  • Human review (required)       │                      │
-│  └──────────────────────────────────┘                      │
-│                 ↓                                          │
-│         Merge to main (human approved)                     │
-│                                                            │
-└────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph PLAT["ENTERPRISE CODING AGENT PLATFORM"]
+        DEV["Developer"] -->|"Jira ticket / PR description"| INT["TASK INTAKE LAYER<br>• Parse task from Jira/GitHub<br>• Classify: simple/complex<br>• Route to model tier + budget"]
+        INT -->|"Simple fix"| MID["Mid-tier model"]
+        INT -->|"Complex feature"| FR["Frontier model,<br>same harness"]
+        MID --> EX["EXECUTION PLANE (your infra)<br>• Container/microVM per task<br>• Egress allowlist, no prod keys"]
+        FR --> EX
+        EX --> REV["REVIEW LAYER<br>• Git diff → PR creation<br>• Auto-run CI tests<br>• Human review (required)"]
+        REV --> MRG["Merge to main (human approved)"]
+    end
 ```
 
 ### Key Production Decisions

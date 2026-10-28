@@ -74,34 +74,20 @@ This case study walks through designing a production customer support agent for 
 
 ### High-Level Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      CUSTOMER SUPPORT AGENT                      │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ┌─────────────┐     ┌─────────────┐     ┌─────────────┐        │
-│  │   Web/App   │────▶│   Gateway   │────▶│    Auth     │        │
-│  │   Client    │     │             │     │  + Tenant   │        │
-│  └─────────────┘     └──────┬──────┘     └─────────────┘        │
-│                             │                                    │
-│                             ▼                                    │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │                   ORCHESTRATION LAYER                     │   │
-│  │  ┌────────────────────────────────────────────────────┐  │   │
-│  │  │  Intent        Query          Response    Workflow │  │   │
-│  │  │  Classifier → Router →        Generator → Engine   │  │   │
-│  │  └────────────────────────────────────────────────────┘  │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                             │                                    │
-│         ┌───────────────────┼───────────────────┐               │
-│         ▼                   ▼                   ▼               │
-│  ┌─────────────┐     ┌─────────────┐     ┌─────────────┐        │
-│  │  Knowledge  │     │   Account   │     │   Action    │        │
-│  │    Base     │     │   Context   │     │   Tools     │        │
-│  │   (RAG)     │     │   Service   │     │             │        │
-│  └─────────────┘     └─────────────┘     └─────────────┘        │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph CSA["CUSTOMER SUPPORT AGENT"]
+        CL["Web/App<br>Client"] --> GW["Gateway"]
+        GW --> AU["Auth<br>+ Tenant"]
+        GW --> ORCH
+        subgraph ORCH["ORCHESTRATION LAYER"]
+            direction LR
+            IC["Intent<br>Classifier"] --> QR["Query<br>Router"] --> RG["Response<br>Generator"] --> WE["Workflow<br>Engine"]
+        end
+        ORCH --> KB["Knowledge<br>Base<br>(RAG)"]
+        ORCH --> AC["Account<br>Context<br>Service"]
+        ORCH --> AT["Action<br>Tools"]
+    end
 ```
 
 Rendered as a layered flow. The orchestration layer dispatches to three parallel context sources, then assembles them in the response generator:
@@ -130,47 +116,19 @@ flowchart TD
 
 ### Conversation Flow
 
-```
-User Message
-    │
-    ▼
-┌─────────────────┐
-│ Intent Classify │─── billing, technical, account, general, escalation
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Query Routing   │─── Which knowledge sources? Which tools?
-└────────┬────────┘
-         │
-    ┌────┴────┬────────────┐
-    ▼         ▼            ▼
-┌───────┐ ┌───────┐ ┌──────────┐
-│  RAG  │ │Account│ │ Actions  │
-│ Query │ │Context│ │ (if any) │
-└───┬───┘ └───┬───┘ └────┬─────┘
-    │         │          │
-    └────┬────┴──────────┘
-         │
-         ▼
-┌─────────────────┐
-│    Generate     │
-│    Response     │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Safety Check   │─── PII, harmful, off-topic
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Confidence     │─── Low confidence? Escalate
-│    Check        │
-└────────┬────────┘
-         │
-         ▼
-    Response / Escalation
+```mermaid
+flowchart TD
+    UM["User Message"] --> IC["Intent Classify<br>billing, technical, account, general, escalation"]
+    IC --> QR["Query Routing<br>Which knowledge sources? Which tools?"]
+    QR --> RAG["RAG<br>Query"]
+    QR --> ACC["Account<br>Context"]
+    QR --> ACT["Actions<br>(if any)"]
+    RAG --> GR["Generate<br>Response"]
+    ACC --> GR
+    ACT --> GR
+    GR --> SC["Safety Check<br>PII, harmful, off-topic"]
+    SC --> CC["Confidence<br>Check<br>Low confidence? Escalate"]
+    CC --> OUT["Response / Escalation"]
 ```
 
 A turn is a state machine. The two gates that matter for cost and trust are *safety* (must pass before leaving the system) and *confidence* (decides escalation vs auto-reply):

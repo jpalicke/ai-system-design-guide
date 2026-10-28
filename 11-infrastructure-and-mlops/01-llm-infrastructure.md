@@ -78,31 +78,21 @@ def should_use_api(requirements: dict) -> bool:
 
 ### Single Model Serving
 
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Client    │────▶│   Gateway   │────▶│  LLM Server │
-└─────────────┘     └─────────────┘     └─────────────┘
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │    Cache    │
-                    └─────────────┘
+```mermaid
+flowchart LR
+    C["Client"] --> G["Gateway"]
+    G --> L["LLM Server"]
+    G --> K["Cache"]
 ```
 
 ### Multi-Model Serving
 
-```
-                    ┌────────────────────────────────┐
-                    │         Load Balancer          │
-                    └───────────────┬────────────────┘
-                                    │
-            ┌───────────────────────┼───────────────────────┐
-            │                       │                       │
-            ▼                       ▼                       ▼
-    ┌───────────────┐       ┌───────────────┐       ┌───────────────┐
-    │  OpenAI Pool  │       │  Claude Pool  │       │  Open-weight  │
-    │  (API calls)  │       │  (API calls)  │       │ (self-hosted) │
-    └───────────────┘       └───────────────┘       └───────────────┘
+```mermaid
+flowchart TD
+    LB["Load Balancer"]
+    LB --> O["OpenAI Pool<br>(API calls)"]
+    LB --> C["Claude Pool<br>(API calls)"]
+    LB --> W["Open-weight<br>(self-hosted)"]
 ```
 
 ### Model Router Pattern
@@ -205,18 +195,11 @@ Size by memory, not FLOPS: weights plus KV cache at your target concurrency and 
 
 For high-throughput async workloads:
 
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  Producers  │────▶│    Queue    │────▶│  Consumers  │
-└─────────────┘     │  (Redis/    │     │  (LLM       │
-                    │   SQS)      │     │   Workers)  │
-                    └─────────────┘     └─────────────┘
-                                               │
-                                               ▼
-                                        ┌─────────────┐
-                                        │  Results    │
-                                        │  Store      │
-                                        └─────────────┘
+```mermaid
+flowchart LR
+    P["Producers"] --> Q["Queue<br>(Redis/SQS)"]
+    Q --> C["Consumers<br>(LLM Workers)"]
+    C --> R["Results<br>Store"]
 ```
 
 ```python

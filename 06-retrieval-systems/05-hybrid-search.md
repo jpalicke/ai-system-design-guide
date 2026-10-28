@@ -177,14 +177,14 @@ results = client.query_points(
 
 ### Architecture 3: Staged Retrieval
 
-```
-Query --> Sparse (fast, broad) --> Top 1000
-                    |
-                    v
-          Dense reranking --> Top 100
-                    |
-                    v
-           Cross-encoder --> Top 10
+```mermaid
+flowchart LR
+    Q["Query"] --> S["Sparse (fast, broad)"]
+    S --> T1["Top 1000"]
+    T1 --> D["Dense reranking"]
+    D --> T2["Top 100"]
+    T2 --> X["Cross-encoder"]
+    X --> T3["Top 10"]
 ```
 
 **Pros:** Efficient, each stage refines

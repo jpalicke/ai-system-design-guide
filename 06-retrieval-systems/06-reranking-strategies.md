@@ -60,10 +60,10 @@ The cross-encoder sees that "CUDA memory" in the query relates to "GPU memory...
 ### Bi-Encoder vs Cross-Encoder
 
 **Bi-Encoder (First Stage):**
-```
-Query --> Encoder --> Query Embedding -+
-                                      +-> Similarity
-Document --> Encoder --> Doc Embedding +
+```mermaid
+flowchart LR
+    Q["Query"] --> E1["Encoder"] --> QE["Query Embedding"] --> S["Similarity"]
+    D["Document"] --> E2["Encoder"] --> DE["Doc Embedding"] --> S
 ```
 - O(1) per document (embeddings pre-computed)
 - Cannot see query-document interactions

@@ -21,56 +21,25 @@ This chapter provides a comprehensive view of the complete transformer architect
 
 A decoder-only transformer (the architecture behind GPT-3, Llama and most open models, and widely assumed for closed frontier models whose designs are unpublished) consists of:
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     Token Embeddings                            │
-│              + Position Embeddings (or RoPE)                    │
-└──────────────────────────┬──────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│    ┌─────────────────────────────────────────────────────┐      │
-│    │                  Transformer Block                   │      │
-│    │  ┌─────────────────────────────────────────────┐    │      │
-│    │  │              RMSNorm/LayerNorm              │    │      │
-│    │  └───────────────────┬─────────────────────────┘    │      │
-│    │                      ▼                              │      │
-│    │  ┌─────────────────────────────────────────────┐    │      │
-│    │  │         Masked Multi-Head Attention         │    │      │
-│    │  │            (with KV Cache)                  │    │      │
-│    │  └───────────────────┬─────────────────────────┘    │      │
-│    │                      │                              │      │
-│    │                  + Residual                         │      │
-│    │                      │                              │      │
-│    │  ┌─────────────────────────────────────────────┐    │      │
-│    │  │              RMSNorm/LayerNorm              │    │      │
-│    │  └───────────────────┬─────────────────────────┘    │      │
-│    │                      ▼                              │      │
-│    │  ┌─────────────────────────────────────────────┐    │      │
-│    │  │             Feed-Forward Network            │    │      │
-│    │  │               (SwiGLU/GELU)                 │    │      │
-│    │  └───────────────────┬─────────────────────────┘    │      │
-│    │                      │                              │      │
-│    │                  + Residual                         │      │
-│    └──────────────────────┴──────────────────────────────┘      │
-│                           │                                     │
-│                    Repeat × N layers                            │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      Output RMSNorm                             │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                   Language Model Head                           │
-│              (Linear: hidden_dim → vocab_size)                  │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │
-                            ▼
-                         Logits
+```mermaid
+flowchart TD
+    EMB["Token Embeddings<br>+ Position Embeddings (or RoPE)"]
+    subgraph LAYERS["Repeat × N layers"]
+        subgraph TB["Transformer Block"]
+            N1["RMSNorm/LayerNorm"] --> ATT["Masked Multi-Head Attention<br>(with KV Cache)"]
+            ATT --> R1["+ Residual"]
+            R1 --> N2["RMSNorm/LayerNorm"]
+            N2 --> FFN["Feed-Forward Network<br>(SwiGLU/GELU)"]
+            FFN --> R2["+ Residual"]
+        end
+    end
+    ONORM["Output RMSNorm"]
+    LM["Language Model Head<br>(Linear: hidden_dim → vocab_size)"]
+    LOG["Logits"]
+    EMB --> N1
+    R2 --> ONORM
+    ONORM --> LM
+    LM --> LOG
 ```
 
 ---

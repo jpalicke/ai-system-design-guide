@@ -61,41 +61,23 @@ This case study covers designing a production code assistant that provides real-
 
 ### High-Level Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    CODE ASSISTANT ARCHITECTURE                   │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ┌─────────────┐                                                │
-│  │     IDE     │                                                │
-│  │  Extension  │                                                │
-│  └──────┬──────┘                                                │
-│         │                                                        │
-│         ▼                                                        │
-│  ┌─────────────────────────────────────────────────────────┐    │
-│  │                    GATEWAY / ROUTER                      │    │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐              │    │
-│  │  │ Debounce │  │  Auth    │  │ Feature  │              │    │
-│  │  │          │  │          │  │  Flags   │              │    │
-│  │  └──────────┘  └──────────┘  └──────────┘              │    │
-│  └─────────────────────────┬───────────────────────────────┘    │
-│                            │                                     │
-│         ┌──────────────────┼──────────────────┐                 │
-│         ▼                  ▼                  ▼                 │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐         │
-│  │  Completion │    │ Generation  │    │ Explanation │         │
-│  │   Service   │    │  Service    │    │  Service    │         │
-│  │  (fast)     │    │ (quality)   │    │ (quality)   │         │
-│  └──────┬──────┘    └──────┬──────┘    └──────┬──────┘         │
-│         │                  │                  │                  │
-│         └──────────────────┼──────────────────┘                 │
-│                            ▼                                     │
-│                    ┌─────────────┐                              │
-│                    │   Model     │                              │
-│                    │   Layer     │                              │
-│                    └─────────────┘                              │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph CAA["CODE ASSISTANT ARCHITECTURE"]
+        IDE["IDE<br>Extension"] --> GR
+        subgraph GR["GATEWAY / ROUTER"]
+            direction LR
+            DB["Debounce"]
+            AU["Auth"]
+            FF["Feature<br>Flags"]
+        end
+        GR --> CS["Completion<br>Service<br>(fast)"]
+        GR --> GS["Generation<br>Service<br>(quality)"]
+        GR --> ES["Explanation<br>Service<br>(quality)"]
+        CS --> ML["Model<br>Layer"]
+        GS --> ML
+        ES --> ML
+    end
 ```
 
 The architecture as a flow. Three service tiers split by latency vs quality (completion is sub-200ms, generation and explanation are quality-prioritized) all share one model layer:

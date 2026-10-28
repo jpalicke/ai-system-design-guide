@@ -259,23 +259,14 @@ The user describes a task in natural language. The LLM generates code. The code 
 
 ### Architecture
 
-```
-User (NL): "Analyze the CSV and plot the top 10 products"
-  |
-  v
-[LLM Generates Code] --> Python/Bash/JS
-  |
-  v
-[Permission Gate] --> "Run this code? [y/N]" (auto-approve, always-ask, or rules-based)
-  |
-  v
-[Code Executor] --> Execute, capture stdout/stderr/return value
-  |
-  v
-[Output Observer] --> Error? Feed back to LLM for fix. Success? Present to user.
-  |
-  v
-[LLM Decides] --> Done? Return result. Need more? Generate next code block. (Loop)
+```mermaid
+flowchart TD
+    U["User (NL): 'Analyze the CSV and plot the top 10 products'"] --> G["LLM Generates Code<br>Python/Bash/JS"]
+    G --> P["Permission Gate<br>'Run this code? [y/N]'<br>(auto-approve, always-ask, or rules-based)"]
+    P --> E["Code Executor<br>Execute, capture stdout/stderr/return value"]
+    E --> O["Output Observer<br>Error? Feed back to LLM for fix.<br>Success? Present to user."]
+    O --> D["LLM Decides<br>Done? Return result.<br>Need more? Generate next code block."]
+    D -. "Loop" .-> G
 ```
 
 ### The NL-Code-Execute-Observe Cycle
@@ -530,15 +521,14 @@ class ToolExecutor:
 
 The most powerful error handling pattern in 2026. The agent observes its own failures and autonomously fixes them:
 
-```
-LLM generates code/tool call
-  --> Execute --> Success? -- YES --> Return result
-                     |
-                     NO
-                     |
-                     v
-              Feed error + stderr to LLM --> LLM generates fix --> Execute again
-              (max 5 corrections to prevent infinite loops)
+```mermaid
+flowchart TD
+    G["LLM generates code/tool call"] --> E["Execute"]
+    E --> S{"Success?"}
+    S -->|"YES"| R["Return result"]
+    S -->|"NO"| F["Feed error + stderr to LLM"]
+    F --> X["LLM generates fix"]
+    X -->|"max 5 corrections to prevent infinite loops"| E
 ```
 
 This is how Claude Code, OpenHands, and Cline handle test failures: run tests, see failures, edit code, re-run tests, repeat until green.
@@ -558,20 +548,24 @@ Simplest pattern. One agent, one server. Used for single-purpose tools (database
 
 ### Pattern B: Multi-Server Fan-Out
 
-```
-                  +--> [GitHub MCP]
-[Agent (Client)]--+--> [Postgres MCP]
-                  +--> [Slack MCP]
+```mermaid
+flowchart LR
+    A["Agent (Client)"] --> G["GitHub MCP"]
+    A --> P["Postgres MCP"]
+    A --> S["Slack MCP"]
 ```
 Agent connects to multiple MCP servers simultaneously. Tool schemas are merged into one manifest. Used by Claude Code and multi-tool assistants.
 
 ### Pattern C: MCP Gateway (Enterprise)
 
-```
-[Agent 1] --+                          +--> [GitHub MCP]
-[Agent 2] --+--> [MCP Gateway]  --+--> [Postgres MCP]
-[Agent 3] --+    (Auth, Rate Limit,    +--> [Slack MCP]
-                  Audit, Route)
+```mermaid
+flowchart LR
+    A1["Agent 1"] --> GW
+    A2["Agent 2"] --> GW
+    A3["Agent 3"] --> GW
+    GW["MCP Gateway<br>(Auth, Rate Limit,<br>Audit, Route)"] --> G["GitHub MCP"]
+    GW --> P["Postgres MCP"]
+    GW --> S["Slack MCP"]
 ```
 Central gateway handles auth, rate limiting, and audit logging. Agents authenticate only with the gateway. Used for enterprise and multi-tenant deployments.
 
@@ -593,19 +587,19 @@ No date has been set for the next spec revision. The [tool use and MCP chapter](
 
 Use this decision tree to select the right pattern for your use case:
 
-```
-Does the target system have an API?
- +-- YES --> Pattern 1 (Tool Calling). Wrap as MCP server. Fastest, most reliable.
- +-- NO  --> Does the task require GUI interaction?
-              +-- YES --> Is it a web app?
-              |            +-- YES --> Pattern 2 with element refs (accessibility tree) first,
-              |            |           pixels as fallback. Confirm per action, approve per origin.
-              |            +-- NO  --> Pattern 2 (Vision-Based). Sandbox in VM. Accept latency.
-              +-- NO  --> Is the task primarily code/data work?
-                           +-- YES --> Pattern 3 (Code Exec). Sandbox if multi-tenant.
-                           +-- NO  --> Complex enough for multiple specialists?
-                                        +-- YES --> Pattern 4 (Multi-Agent Orch.)
-                                        +-- NO  --> Pattern 1 with custom tool.
+```mermaid
+flowchart TD
+    Q1{"Does the target system have an API?"}
+    Q1 -->|"YES"| P1["Pattern 1 (Tool Calling).<br>Wrap as MCP server.<br>Fastest, most reliable."]
+    Q1 -->|"NO"| Q2{"Does the task require GUI interaction?"}
+    Q2 -->|"YES"| Q3{"Is it a web app?"}
+    Q3 -->|"YES"| P2a["Pattern 2 with element refs (accessibility tree) first,<br>pixels as fallback.<br>Confirm per action, approve per origin."]
+    Q3 -->|"NO"| P2b["Pattern 2 (Vision-Based).<br>Sandbox in VM. Accept latency."]
+    Q2 -->|"NO"| Q4{"Is the task primarily code/data work?"}
+    Q4 -->|"YES"| P3["Pattern 3 (Code Exec).<br>Sandbox if multi-tenant."]
+    Q4 -->|"NO"| Q5{"Complex enough for multiple specialists?"}
+    Q5 -->|"YES"| P4["Pattern 4 (Multi-Agent Orch.)"]
+    Q5 -->|"NO"| P1b["Pattern 1 with custom tool."]
 ```
 
 ### Hybrid Architectures

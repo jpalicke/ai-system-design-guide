@@ -76,12 +76,12 @@ class AdvancedRAG:
 
 Retrieve small chunks, return larger parent chunks:
 
-```
-Document
-    └── Parent chunk (2000 tokens)
-            ├── Child chunk (200 tokens) ← Retrieve on this
-            ├── Child chunk (200 tokens)
-            └── Child chunk (200 tokens)
+```mermaid
+flowchart TD
+    D["Document"] --> P["Parent chunk<br>(2000 tokens)"]
+    P --> C1["Child chunk (200 tokens)<br>Retrieve on this"]
+    P --> C2["Child chunk (200 tokens)"]
+    P --> C3["Child chunk (200 tokens)"]
 ```
 
 ```python

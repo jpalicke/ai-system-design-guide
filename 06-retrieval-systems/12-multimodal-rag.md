@@ -41,15 +41,25 @@ There are three dominant patterns for multi-modal RAG, each with distinct trade-
 
 ### Pattern 1: Unified Embedding Space
 
-```
-                     Shared Vector Space
-                    +-------------------+
-  Text  --> Encoder |  [0.2, 0.8, ...] |
-  Image --> Encoder |  [0.3, 0.7, ...] |  --> Single Index --> Retrieve
-  Table --> Encoder |  [0.1, 0.9, ...] |
-                    +-------------------+
-
-  Query "show revenue trends" --> encode --> nearest neighbors across ALL modalities
+```mermaid
+flowchart LR
+    T["Text"] --> ET["Encoder"]
+    I["Image"] --> EI["Encoder"]
+    TB["Table"] --> EB["Encoder"]
+    subgraph SVS["Shared Vector Space"]
+        VT["[0.2, 0.8, ...]"]
+        VI["[0.3, 0.7, ...]"]
+        VB["[0.1, 0.9, ...]"]
+    end
+    ET --> VT
+    EI --> VI
+    EB --> VB
+    VT --> IDX["Single Index"]
+    VI --> IDX
+    VB --> IDX
+    IDX --> R["Retrieve"]
+    Q["Query 'show revenue trends'"] -->|"encode"| NN["nearest neighbors across ALL modalities"]
+    NN -.-> IDX
 ```
 
 - **How**: Use a model like CLIP or SigLIP for natural images, or a document-grade multimodal embedder (Cohere Embed 5, Gemini Embedding 2, Voyage Multimodal) for pages, slides and screenshots, to project text and images into the same vector space.
@@ -58,15 +68,15 @@ There are three dominant patterns for multi-modal RAG, each with distinct trade-
 
 ### Pattern 2: Modality-Specific Retrieval with Fusion
 
-```
-  Query --> +----> Text Index    --> Top-K text chunks
-            |
-            +----> Image Index   --> Top-K images
-            |
-            +----> Table Index   --> Top-K tables
-            |
-            v
-        Fusion / Reranking Layer --> Combined Top-K --> VLM Generator
+```mermaid
+flowchart LR
+    Q["Query"] --> TI["Text Index"] --> TK["Top-K text chunks"]
+    Q --> II["Image Index"] --> IK["Top-K images"]
+    Q --> TBI["Table Index"] --> TBK["Top-K tables"]
+    TK --> F["Fusion / Reranking Layer"]
+    IK --> F
+    TBK --> F
+    F --> C["Combined Top-K"] --> V["VLM Generator"]
 ```
 
 - **How**: Separate embeddings and indices per modality. A reranker or reciprocal rank fusion (RRF) merges results.
@@ -75,11 +85,13 @@ There are three dominant patterns for multi-modal RAG, each with distinct trade-
 
 ### Pattern 3: Vision-First (Page-as-Image)
 
-```
-  Document Page --> Screenshot/Render --> Vision Encoder --> Multi-vector Index
-                                              |
-  Query ---------> Text Encoder --------------+---> Late Interaction Score
-                                                    --> Retrieve top pages
+```mermaid
+flowchart LR
+    P["Document Page"] --> S["Screenshot/Render"] --> VE["Vision Encoder"] --> MV["Multi-vector Index"]
+    Q["Query"] --> TE["Text Encoder"]
+    MV --> LI["Late Interaction Score"]
+    TE --> LI
+    LI --> R["Retrieve top pages"]
 ```
 
 - **How**: Treat every document page as an image. Use a vision-language model (e.g., ColPali) to create patch-level embeddings. Score via late interaction (MaxSim).
@@ -126,27 +138,16 @@ Cohere's own ViDoRe V3 table puts Embed 5 Pro at 85.8, Fast 84.5, voyage-4-large
 
 ### Embedding Strategy Decision
 
-```
-Is your content mostly natural images (photos, products)?
-  YES --> CLIP or SigLIP fine-tuned on your domain
-  NO
-    |
-    v
-Is your content document pages (PDFs, slides, reports)?
-  YES --> Baseline: single-vector multimodal embedder (Embed 5,
-          Gemini Embedding 2) + reranker. Move to ColPali / ColQwen
-          (multi-vector, no OCR) if page-level recall falls short
-  NO
-    |
-    v
-Is it a mix of text, images, and structured data?
-  YES --> Modality-specific encoders + fusion (Pattern 2)
-          or one hosted multimodal embedder (Embed 5, Gemini Embedding 2)
-          if a single index matters more than per-modality tuning
-
-Does it include audio or video clips?
-  YES --> Gemini Embedding 2 for retrieval (clips up to 120 s per input),
-          plus transcripts in the text index for exact-term search
+```mermaid
+flowchart TD
+    A{"Is your content mostly natural images (photos, products)?"}
+    A -->|"YES"| A1["CLIP or SigLIP fine-tuned on your domain"]
+    A -->|"NO"| B{"Is your content document pages (PDFs, slides, reports)?"}
+    B -->|"YES"| B1["Baseline: single-vector multimodal embedder (Embed 5, Gemini Embedding 2) + reranker.<br>Move to ColPali / ColQwen (multi-vector, no OCR) if page-level recall falls short"]
+    B -->|"NO"| C{"Is it a mix of text, images, and structured data?"}
+    C -->|"YES"| C1["Modality-specific encoders + fusion (Pattern 2)<br>or one hosted multimodal embedder (Embed 5, Gemini Embedding 2)<br>if a single index matters more than per-modality tuning"]
+    D{"Does it include audio or video clips?"}
+    D -->|"YES"| D1["Gemini Embedding 2 for retrieval (clips up to 120 s per input),<br>plus transcripts in the text index for exact-term search"]
 ```
 
 ---
@@ -170,25 +171,20 @@ Specialist document parsers (Cohere Parse, MinerU, jina-ocr-v1, Nemotron Parse 2
 
 ### VLM-Augmented Ingestion Pipeline
 
-```
-  Raw PDF
-    |
-    v
-  Page Renderer (pdf2image, 300 DPI)
-    |
-    v
-  VLM Extraction Pass:
-    +-- "Extract all tables as markdown"
-    +-- "Describe this chart: axes, trends, key data points"
-    +-- "Summarize the diagram: components and relationships"
-    |
-    v
-  Structured Output (JSON)
-    |
-    +---> Text chunks     --> Text embedding index
-    +---> Table markdown  --> Text embedding index (with metadata: "type=table")
-    +---> Chart summaries --> Text embedding index (with metadata: "type=chart")
-    +---> Page images     --> Image embedding index (CLIP/SigLIP)
+```mermaid
+flowchart TD
+    PDF["Raw PDF"] --> PR["Page Renderer (pdf2image, 300 DPI)"]
+    PR --> VLM
+    subgraph VLM["VLM Extraction Pass"]
+        E1["'Extract all tables as markdown'"]
+        E2["'Describe this chart: axes, trends, key data points'"]
+        E3["'Summarize the diagram: components and relationships'"]
+    end
+    VLM --> SO["Structured Output (JSON)"]
+    SO --> TC["Text chunks"] --> TI["Text embedding index"]
+    SO --> TM["Table markdown"] --> TI2["Text embedding index<br>(with metadata: 'type=table')"]
+    SO --> CS["Chart summaries"] --> TI3["Text embedding index<br>(with metadata: 'type=chart')"]
+    SO --> PI["Page images"] --> II["Image embedding index (CLIP/SigLIP)"]
 ```
 
 This "describe-then-embed" approach converts visual content into searchable text while preserving the original image for the generation step.
@@ -201,31 +197,14 @@ ColPali represents a paradigm shift: instead of building complex OCR + layout + 
 
 ### How ColPali Works
 
-```
-  Document Page Image
-        |
-        v
-  SigLIP Vision Encoder (So400m)
-        |
-  Splits image into patches (e.g., 32x32 grid = 1024 patches)
-        |
-        v
-  Gemma 2B Language Model (contextualizes patch embeddings)
-        |
-        v
-  Linear Projection --> 128-dim patch embeddings
-        |
-  Result: 1024 vectors of dim 128 per page
-        |
-        v
-  Stored in Multi-Vector Index
-
-  At query time:
-  Query --> Tokenize --> Embed --> 128-dim token embeddings
-        |
-        v
-  Late Interaction (MaxSim):
-    Score = Sum over query tokens of Max similarity to any patch
+```mermaid
+flowchart TD
+    IMG["Document Page Image"] --> SV["SigLIP Vision Encoder (So400m)"]
+    SV -->|"Splits image into patches<br>(e.g., 32x32 grid = 1024 patches)"| G["Gemma 2B Language Model<br>(contextualizes patch embeddings)"]
+    G --> LP["Linear Projection<br>128-dim patch embeddings"]
+    LP -->|"Result: 1024 vectors of dim 128 per page"| MV["Stored in Multi-Vector Index"]
+    QY["Query<br>Tokenize, Embed<br>128-dim token embeddings"] --> LI["Late Interaction (MaxSim):<br>Score = Sum over query tokens of Max similarity to any patch"]
+    MV -.->|"At query time"| LI
 ```
 
 ### ColPali vs. Traditional Pipeline
@@ -323,16 +302,10 @@ def extract_tables_from_page(page_image: bytes) -> list[dict]:
 
 For each chart or diagram, store TWO representations:
 
-```
-  Chart Image
-    |
-    +---> (1) Text Description (for text-based retrieval)
-    |         "This bar chart shows Q3 revenue by region.
-    |          North America: $4.2M, Europe: $3.1M, APAC: $2.8M.
-    |          NA grew 15% QoQ while APAC declined 3%."
-    |
-    +---> (2) Original Image (for visual retrieval + generation context)
-              Stored with CLIP/SigLIP embedding for image-based queries
+```mermaid
+flowchart TD
+    CI["Chart Image"] --> D1["(1) Text Description (for text-based retrieval)<br>'This bar chart shows Q3 revenue by region.<br>North America: $4.2M, Europe: $3.1M, APAC: $2.8M.<br>NA grew 15% QoQ while APAC declined 3%.'"]
+    CI --> D2["(2) Original Image (for visual retrieval + generation context)<br>Stored with CLIP/SigLIP embedding for image-based queries"]
 ```
 
 This ensures the chart is retrievable by both text queries ("what was APAC revenue?") and visual queries ("show me the revenue chart").
@@ -345,13 +318,18 @@ Video RAG cost models used to be simple arithmetic: duration x frame rate x toke
 
 On September 1, 2026 Google added **agentic video processing** to Gemini 3.7 Flash, 3.6 Flash and 3.5 Flash-Lite, and the docs now list Gemini 3.8 Flash as well: set `"processing": "agentic"` on the video input and the model uses internal video tools to decide which segments to inspect, at what speed, and through which modality (frames, audio or transcript). It is opt-in (static 1 FPS stays the default), works for uploads and YouTube URLs, and bills at standard token prices with no feature fee. Google reports up to 88% fewer tokens, up to 66% lower cost and up to 7% higher accuracy on standard video benchmarks, with the largest gains on long-form video (vendor-reported).
 
-```
-STATIC (default):   video ──► every frame at 1 FPS + audio ──► context ──► answer
-                    cost scales with duration
-
-AGENTIC (opt-in):   video + question ──► model picks segments, speed, modality
-                                         (frames / audio / transcript) ──► answer
-                    cost scales with how much of the video the question needs
+```mermaid
+flowchart LR
+    subgraph STATIC["STATIC (default)"]
+        direction LR
+        V1["video"] --> F1["every frame at 1 FPS + audio"] --> C1["context"] --> A1["answer"]
+        A1 -.-> N1["cost scales with duration"]
+    end
+    subgraph AGENTIC["AGENTIC (opt-in)"]
+        direction LR
+        V2["video + question"] --> P2["model picks segments, speed, modality<br>(frames / audio / transcript)"] --> A2["answer"]
+        A2 -.-> N2["cost scales with how much of the video the question needs"]
+    end
 ```
 
 Design implications:
@@ -365,22 +343,27 @@ Design implications:
 
 ### Full Multi-Modal RAG Pipeline
 
-```
-  INGESTION:
-  Raw Docs --> Doc Classifier --+--> Text-Heavy  --> chunking + text embeddings
-                                +--> Visual-Heavy --> page render + ColPali
-                                +--> Mixed        --> VLM extraction + hybrid
-                                         |
-                                         v
-                          [Text Index] [Image Index] [Table Index]
-
-  RETRIEVAL:
-  Query --> Query Analyzer --+--> Text:  BM25 + dense search
-                             +--> Image: CLIP/ColPali search
-                             +--> Table: metadata-filtered dense
-                                    |
-                                    v
-                             Cross-Modal Reranker --> Context Assembly --> VLM --> Response
+```mermaid
+flowchart TD
+    subgraph ING["INGESTION"]
+        RD["Raw Docs"] --> DC["Doc Classifier"]
+        DC --> TH["Text-Heavy"] --> THA["chunking + text embeddings"]
+        DC --> VH["Visual-Heavy"] --> VHA["page render + ColPali"]
+        DC --> MX["Mixed"] --> MXA["VLM extraction + hybrid"]
+        THA --> IDX["[Text Index] [Image Index] [Table Index]"]
+        VHA --> IDX
+        MXA --> IDX
+    end
+    subgraph RET["RETRIEVAL"]
+        QY["Query"] --> QA["Query Analyzer"]
+        QA --> QT["Text: BM25 + dense search"]
+        QA --> QI["Image: CLIP/ColPali search"]
+        QA --> QB["Table: metadata-filtered dense"]
+        QT --> RR["Cross-Modal Reranker"]
+        QI --> RR
+        QB --> RR
+        RR --> CA["Context Assembly"] --> VLM["VLM"] --> RS["Response"]
+    end
 ```
 
 ### Scaling Considerations

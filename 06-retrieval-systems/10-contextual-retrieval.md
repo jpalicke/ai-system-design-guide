@@ -48,24 +48,20 @@ Chunk 18: "The Enterprise plan includes SSO and audit
 
 The core idea is simple: **before embedding a chunk, prepend a short context string that explains what the chunk is about within the full document**.
 
+```mermaid
+flowchart LR
+    subgraph TRAD["TRADITIONAL CHUNKING"]
+        D["Document"] --> S["Split"] --> C["Chunks"] --> E["Embed"] --> DB[("DB")]
+    end
 ```
-┌──────────────────────────────────────────────────┐
-│              TRADITIONAL CHUNKING                │
-│                                                  │
-│  Document ──► Split ──► Chunks ──► Embed ──► DB  │
-│                                                  │
-└──────────────────────────────────────────────────┘
 
-┌──────────────────────────────────────────────────────────────┐
-│              CONTEXTUAL RETRIEVAL                            │
-│                                                              │
-│  Document ──► Split ──► Chunks ──┐                           │
-│                                  ├──► Contextualize ──►      │
-│  Document (full) ───────────────┘    (LLM call per chunk)    │
-│                                                              │
-│  ──► Contextual Chunks ──► Embed ──► DB                      │
-│                            + BM25 Index                      │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    subgraph CTX["CONTEXTUAL RETRIEVAL"]
+        D["Document"] --> S["Split"] --> C["Chunks"] --> X["Contextualize<br>(LLM call per chunk)"]
+        DF["Document (full)"] --> X
+        X --> CC["Contextual Chunks"] --> E["Embed"] --> DB[("DB<br>+ BM25 Index")]
+    end
 ```
 
 **The contextualization step** sends the full document + individual chunk to an LLM with this prompt:
@@ -177,22 +173,18 @@ The production-grade Contextual Retrieval pipeline has four stages:
 │  4. Index contextualized chunks ──► BM25 Index                  │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
+```
 
-┌─────────────────────────────────────────────────────────────────┐
-│                     QUERY PIPELINE                              │
-│                                                                 │
-│  User Query                                                     │
-│      │                                                          │
-│      ├──► Vector Search (Top 50) ──┐                            │
-│      │                             ├──► RRF Fusion (Top 25)     │
-│      └──► BM25 Search (Top 50)  ──┘         │                   │
-│                                             ▼                   │
-│                                      Reranker (Top 5)           │
-│                                             │                   │
-│                                             ▼                   │
-│                                     LLM Generation              │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph QP["QUERY PIPELINE"]
+        UQ["User Query"] --> VS["Vector Search (Top 50)"]
+        UQ --> BM["BM25 Search (Top 50)"]
+        VS --> RRF["RRF Fusion (Top 25)"]
+        BM --> RRF
+        RRF --> RR["Reranker (Top 5)"]
+        RR --> GEN["LLM Generation"]
+    end
 ```
 
 ### Reciprocal Rank Fusion (RRF) for Combining Results
@@ -423,13 +415,14 @@ Haiku 4.5 is still the only Haiku; Haiku 5.5 was announced for "the coming weeks
 
 **Late Chunking** (Jina, 2024) is a related but distinct approach:
 
-```
-Contextual Retrieval:
-  Chunk ──► LLM adds context ──► Embed enriched chunk
-
-Late Chunking:
-  Full doc ──► Long-context embed model ──► Token embeddings
-  ──► THEN chunk the token embeddings (preserving context)
+```mermaid
+flowchart LR
+    subgraph CR["Contextual Retrieval"]
+        C["Chunk"] --> L["LLM adds context"] --> EE["Embed enriched chunk"]
+    end
+    subgraph LC["Late Chunking"]
+        F["Full doc"] --> LM["Long-context embed model"] --> TE["Token embeddings"] --> TH["THEN chunk the token embeddings (preserving context)"]
+    end
 ```
 
 Late Chunking requires a long-context embedding model (e.g., Jina v3) and avoids LLM calls entirely. It preserves context through the embedding model's attention mechanism rather than explicit text prepending. The tradeoff is that Late Chunking does not help BM25 search, only dense retrieval.
@@ -457,47 +450,32 @@ The same idea now ships as a hosted embedding API, which cuts the ingestion cost
 
 ### Reference Architecture: Contextual RAG at Scale
 
+```mermaid
+flowchart TD
+    subgraph ING["INGESTION SERVICE"]
+        DS["Document Store"] --> CH["Chunker"]
+        CH --> CQ["Contextualization Queue"]
+        CQ --> W["Workers + Cache<br>(N parallel LLM calls)"]
+        CH --> RC["Raw Chunks"]
+        W --> CC["Contextualized Chunks"]
+        CC --> EB["Embed + BM25"]
+        RC --> MDB[("Metadata DB")]
+        EB --> VDB[("Vector DB + BM25 Index")]
+    end
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                     INGESTION SERVICE                               │
-│                                                                     │
-│  Document Store ──► Chunker ──► Contextualization Queue             │
-│                       │              │                              │
-│                       │         ┌────┴────┐                         │
-│                       │         │ Workers  │ (N parallel LLM calls) │
-│                       │         │ + Cache  │                        │
-│                       │         └────┬────┘                         │
-│                       │              │                              │
-│                       ▼              ▼                              │
-│                  Raw Chunks    Contextualized Chunks                 │
-│                       │              │                              │
-│                       │         ┌────┴────┐                         │
-│                       │         │ Embed + │                         │
-│                       │         │ BM25    │                         │
-│                       │         └────┬────┘                         │
-│                       │              │                              │
-│                       ▼              ▼                              │
-│                  Metadata DB    Vector DB + BM25 Index               │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────────────┐
-│                     QUERY SERVICE                                   │
-│                                                                     │
-│  Query ──► [Vector Search] + [BM25 Search]                          │
-│                    │               │                                │
-│                    └───── RRF ─────┘                                │
-│                           │                                         │
-│                      Top 25 chunks                                  │
-│                           │                                         │
-│                      Reranker (Cohere Rerank 4, Voyage rerank-3,    │
-│                      or a self-hosted cross-encoder)                │
-│                           │                                         │
-│                      Top 5 chunks                                   │
-│                           │                                         │
-│                      LLM Generation                                 │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph QS["QUERY SERVICE"]
+        Q["Query"] --> VS["Vector Search"]
+        Q --> BS["BM25 Search"]
+        VS --> RRF["RRF"]
+        BS --> RRF
+        RRF --> T25["Top 25 chunks"]
+        T25 --> RR["Reranker (Cohere Rerank 4, Voyage rerank-3,<br>or a self-hosted cross-encoder)"]
+        RR --> T5["Top 5 chunks"]
+        T5 --> GEN["LLM Generation"]
+    end
 ```
 
 ### Scaling Considerations

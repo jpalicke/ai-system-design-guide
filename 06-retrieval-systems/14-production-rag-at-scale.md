@@ -440,14 +440,19 @@ A naive sequential RAG pipeline adds latency at every step. Production pipelines
 SEQUENTIAL (Naive):
 Query -> Embed(200ms) -> Search(150ms) -> Rerank(300ms) -> Generate(800ms)
 Total: ~1450ms
+```
 
 OPTIMIZED (Parallel + Cached):
-Query ----+---> Embed(200ms) ---> Vector Search(150ms) ---+
-          |                                                |--> RRF Merge -> Rerank(300ms) -> Generate(800ms)
-          +---> BM25 Keyword Search(100ms) ---------------+
-          |
-          +---> Cache Check(5ms) -- HIT --> Return cached (5ms total)
 
+```mermaid
+flowchart LR
+    Q["Query"] --> E["Embed(200ms)"] --> VS["Vector Search(150ms)"] --> RRF["RRF Merge"]
+    Q --> BM["BM25 Keyword Search(100ms)"] --> RRF
+    Q --> CC["Cache Check(5ms)"] -->|"HIT"| RC["Return cached (5ms total)"]
+    RRF --> RK["Rerank(300ms)"] --> G["Generate(800ms)"]
+```
+
+```
 With cache miss: ~1050ms (embedding + keyword in parallel)
 With cache hit:  ~5ms
 ```
@@ -1483,43 +1488,17 @@ Ingestion: Async via Kafka, ~50K docs/day
 
 ### Example 3: Legal Document Analysis
 
-```
-  User: "Summarize indemnification clauses across all vendor contracts"
-      |
-      v
-  +---------------------+
-  | Agentic RAG Planner |
-  +---------------------+
-      |
-      | Plan: 1. Find all vendor contracts
-      |        2. Extract indemnification clauses
-      |        3. Synthesize comparison
-      |
-      v
-  +---------------------+    +-------------------+
-  | Step 1: Metadata    |--->| Filter: doc_type  |
-  | Search              |    | = "vendor_contract"|
-  +---------------------+    +-------------------+
-      |                            |
-      | 47 contracts found         |
-      v                            v
-  +---------------------+    +-------------------+
-  | Step 2: Section     |--->| Filter: section   |
-  | Retrieval           |    | = "indemnification"|
-  +---------------------+    +-------------------+
-      |                            |
-      | 43 relevant sections       |
-      v                            |
-  +---------------------+         |
-  | Step 3: Long Context|<--------+
-  | Synthesis           |
-  | (load 43 sections   |
-  |  into 1M context)   |
-  +---------------------+
-      |
-      v
-  Comparative summary with
-  per-contract citations
+```mermaid
+flowchart TD
+    U["User: 'Summarize indemnification clauses across all vendor contracts'"] --> P["Agentic RAG Planner"]
+    P -->|"Plan:<br>1. Find all vendor contracts<br>2. Extract indemnification clauses<br>3. Synthesize comparison"| S1["Step 1: Metadata Search"]
+    S1 -.-> F1["Filter: doc_type = 'vendor_contract'"]
+    S1 -->|"47 contracts found"| S2["Step 2: Section Retrieval"]
+    F1 -.-> S2
+    S2 -.-> F2["Filter: section = 'indemnification'"]
+    S2 -->|"43 relevant sections"| S3["Step 3: Long Context Synthesis<br>(load 43 sections into 1M context)"]
+    F2 -.-> S3
+    S3 --> OUT["Comparative summary with<br>per-contract citations"]
 ```
 
 ---

@@ -192,18 +192,14 @@ Multi-agent systems fail at the handoffs. MAST (Cemri et al., "Why Do Multi-Agen
 
 ### How Cascading Failures Happen
 
-```
-Agent A                Agent B                Agent C
-(correct)              (poisoned)             (acts on bad data)
-   |                      |                      |
-   +------ msg --------->+|                      |
-   |                      |                      |
-   |                      +--- corrupted msg --->+|
-   |                      |                      |
-   |                      |                      +--- bad action
-   |                      |                      |   (writes to DB,
-   |                      |                      |    sends email,
-   |                      |                      |    triggers alert)
+```mermaid
+sequenceDiagram
+    participant A as Agent A (correct)
+    participant B as Agent B (poisoned)
+    participant C as Agent C (acts on bad data)
+    A->>B: msg
+    B->>C: corrupted msg
+    Note over C: bad action<br>(writes to DB, sends email, triggers alert)
 ```
 
 ### Wrong Tool Selection

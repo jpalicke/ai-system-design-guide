@@ -1027,28 +1027,24 @@ See [Embeddings and Vector Spaces](../01-foundations/05-embeddings-and-vector-sp
 
 ### Decision Tree
 
-```
-What is your primary constraint?
-
-├── Cost → Use smaller model, consider open source
-│   ├── Very cost sensitive → GPT-6 Luna ($0.10/$0.50), Gemini 3.8 Flash (budget on the 2027 price), DeepSeek V4.1-Flash (off-peak), Claude Haiku 4.5
-│   └── Moderate budget → Claude Sonnet 5.5, GPT-6 Sol or GPT-6.1 Sol ($2/$10), Muse Spark 1.3
-│
-├── Quality + Reasoning → Use frontier models
-│   ├── Highest reasoning → Claude Fable 5.1, GPT-6 Astra (xhigh/max), Claude Opus 5.5 at high effort
-│   └── Coding + reasoning → Claude Opus 5.5 (start here), Claude Sonnet 5.5, GPT-6.1 Sol
-│
-├── Latency → Use fast models or paid speed tiers
-│   ├── Interactive and cheap → GPT-6 Luna, Gemini 3.8 Flash at low thinking, Claude Haiku 4.5
-│   └── Frontier quality, faster → Opus 5.5 fast mode ($8/$40), GPT-6 Astra Fast (2x) or Ultrafast (6x)
-│
-├── Self-hosting → Use open models (read the license first)
-│   ├── Maximum capability → MiMo-V2.6-Pro (MIT), GLM-5.3 (MIT plus review above $10B), Kimi K3 (MaaS gate above $20M)
-│   ├── Good balance → GLM-5.3-Flash (MIT), Tencent Hy4 preview (Apache 2.0), Qwen3.8-27B (Apache 2.0)
-│   └── Edge/mobile → Gemma 4 12B or E4B, Granite 4.2 3B/8B, K2 Horizon 0.9B-7B
-│
-└── Privacy → Self-host, ZDR, or residency-pinned endpoints
-    └── Opus 5.5 and Sonnet 5.5 support ZDR; Fable 5.1 needs authorization; residency costs ~10% more
+```mermaid
+flowchart LR
+    Q{"What is your primary constraint?"}
+    Q -->|"Cost"| C["Use smaller model, consider open source"]
+    C -->|"Very cost sensitive"| C1["GPT-6 Luna ($0.10/$0.50), Gemini 3.8 Flash (budget on the 2027 price), DeepSeek V4.1-Flash (off-peak), Claude Haiku 4.5"]
+    C -->|"Moderate budget"| C2["Claude Sonnet 5.5, GPT-6 Sol or GPT-6.1 Sol ($2/$10), Muse Spark 1.3"]
+    Q -->|"Quality + Reasoning"| QR["Use frontier models"]
+    QR -->|"Highest reasoning"| QR1["Claude Fable 5.1, GPT-6 Astra (xhigh/max), Claude Opus 5.5 at high effort"]
+    QR -->|"Coding + reasoning"| QR2["Claude Opus 5.5 (start here), Claude Sonnet 5.5, GPT-6.1 Sol"]
+    Q -->|"Latency"| L["Use fast models or paid speed tiers"]
+    L -->|"Interactive and cheap"| L1["GPT-6 Luna, Gemini 3.8 Flash at low thinking, Claude Haiku 4.5"]
+    L -->|"Frontier quality, faster"| L2["Opus 5.5 fast mode ($8/$40), GPT-6 Astra Fast (2x) or Ultrafast (6x)"]
+    Q -->|"Self-hosting"| S["Use open models (read the license first)"]
+    S -->|"Maximum capability"| S1["MiMo-V2.6-Pro (MIT), GLM-5.3 (MIT plus review above $10B), Kimi K3 (MaaS gate above $20M)"]
+    S -->|"Good balance"| S2["GLM-5.3-Flash (MIT), Tencent Hy4 preview (Apache 2.0), Qwen3.8-27B (Apache 2.0)"]
+    S -->|"Edge/mobile"| S3["Gemma 4 12B or E4B, Granite 4.2 3B/8B, K2 Horizon 0.9B-7B"]
+    Q -->|"Privacy"| P["Self-host, ZDR, or residency-pinned endpoints"]
+    P --> P1["Opus 5.5 and Sonnet 5.5 support ZDR; Fable 5.1 needs authorization; residency costs ~10% more"]
 ```
 
 ### Semantic Routing

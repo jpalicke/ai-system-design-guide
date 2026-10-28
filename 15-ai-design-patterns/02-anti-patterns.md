@@ -102,14 +102,11 @@ class LLMClient:
 - Adds platform risk: OpenAI is winding down self-serve fine-tuning, and even active customers cannot create new jobs from January 6, 2027. If you do fine-tune, prefer weights you control
 
 **Decision flow:**
-```
-Try prompting first
-    ↓ (not working)
-Try few-shot examples
-    ↓ (not working)
-Try RAG for knowledge
-    ↓ (not working)
-Consider fine-tuning (with 500+ examples)
+```mermaid
+flowchart TD
+    A["Try prompting first"] -->|"not working"| B["Try few-shot examples"]
+    B -->|"not working"| C["Try RAG for knowledge"]
+    C -->|"not working"| D["Consider fine-tuning<br>(with 500+ examples)"]
 ```
 
 ---
