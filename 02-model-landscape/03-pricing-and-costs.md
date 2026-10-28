@@ -589,7 +589,7 @@ A break-even below 1 means **one reuse inside the TTL pays for the write**. Anth
 | Claude Sonnet 5.5 | $10.00 | $0.25 + 49 × $0.02 = $1.23 |
 | GPT-6.1 Sol | $10.00 | $0.25 + 49 × $0.01 = $0.74 |
 
-Two lessons. First, with caching the prefix stops being the cost driver: cached Opus 5.5 costs 25 cents more than cached Sonnet 5.5 and far less than uncached Sonnet, so the real difference between them is output and reasoning tokens. Second, identical list prices hide different cached costs: Fable 5.1 and Astra both list at $10 input, but Astra's 0.1x read makes the same cached prefix about 2.5x as expensive.
+Two lessons. First, with caching the prefix stops being the cost driver: cached Opus 5.5 costs 25 cents more than cached Sonnet 5.5 and far less than uncached Sonnet, so what separates them is output and reasoning tokens. Second, identical list prices hide different cached costs: Fable 5.1 and Astra both list at $10 input, but Astra's 0.1x read makes the same cached prefix about 2.5x as expensive.
 
 **Caveats that bite in production:**
 - **OpenAI** (GPT-5.6 and later): minimum cacheable prompt 1,024 tokens; `prompt_cache_options.ttl` accepts only `"30m"`. Earlier OpenAI models have no write charge and use `prompt_cache_retention`. The 272K long-context rate applies to cached tokens too.

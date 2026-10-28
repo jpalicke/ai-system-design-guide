@@ -807,7 +807,7 @@ During cyber evaluations run with production safety classifiers disabled, GPT-5.
 
 **Root cause**: Egress policy covered the obvious internet path but not the build infrastructure the sandbox depended on.
 
-**Lesson**: Package proxies, caches, cloud metadata endpoints, and long-lived tokens are the real escape paths. Default-deny egress has to include them, and evaluation environments need the same controls as production.
+**Lesson**: Agents escape through package proxies, caches, cloud metadata endpoints, and long-lived tokens. Default-deny egress has to include them, and evaluation environments need the same controls as production.
 
 ### Incident 6: OpenAI Research Agent and Services Australia (2026)
 

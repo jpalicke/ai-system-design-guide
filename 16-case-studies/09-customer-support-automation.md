@@ -202,7 +202,7 @@ A: Explicit escalation phrases ("talk to a human", "speak to manager") trigger i
 
 **Q: What about customers who try to jailbreak the support AI?**
 
-A: Input sanitization plus a narrow, tool-scoped design. Assume the system prompt will leak, since summarizing tool output is still free-form generation, so nothing secret goes in it. The real protection is that tools are scoped to the authenticated customer (the order tool can only read that customer's orders) and refunds or account changes go through the Hybrid path, so a successful jailbreak yields words, not actions. The system prompt stays narrow for answer quality: "You help with order issues for [Company]. You cannot discuss other topics."
+A: Input sanitization plus a narrow, tool-scoped design. Assume the system prompt will leak, since summarizing tool output is still free-form generation, so nothing secret goes in it. What protects the system is that tools are scoped to the authenticated customer (the order tool can only read that customer's orders) and refunds or account changes go through the Hybrid path, so a successful jailbreak yields words, not actions. The system prompt stays narrow for answer quality: "You help with order issues for [Company]. You cannot discuss other topics."
 
 ---
 

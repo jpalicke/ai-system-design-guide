@@ -3373,7 +3373,7 @@ Real lessons from implementing complete eval pipelines in production:
 
 **On Process & Methodology (Chapters 3, 11, 12)**
 
-6. **Error analysis is the real work** - Fancy tools don't matter if you haven't sat down and looked at your failures. Open coding → axial coding → prioritization is the workflow that works.
+6. **Start with error analysis** - Fancy tools don't matter if you haven't sat down and looked at your failures. Open coding → axial coding → prioritization is the workflow that works.
 
 7. **Human annotators disagree more than you think** - Measure inter-annotator agreement (Cohen's kappa) before trusting your ground truth. If humans can't agree, the judge won't either.
 
