@@ -287,7 +287,7 @@ The unit of measurement shifts from cost-per-token to **cost-per-task**. A loop 
 - **No-progress signals**: repetition streaks, plan similarity between cycles, oscillation frequency.
 - **Failure-bucket distribution** (timeout, unverified write, undetected command failure, premature termination, model-limited) to fix the why, not just the what. Expect a share to be model-limited and unfixable by harness tuning.
 - **Context-health**: window growth per iteration, compaction frequency, accuracy-versus-length curves.
-- **Reviewability**: lines changed per review-hour and the fraction of merged changes actually reviewed. Review bandwidth, not tool capability, is the real ceiling on loops-in-flight.
+- **Reviewability**: lines changed per review-hour and the fraction of merged changes actually reviewed. Review bandwidth, not tool capability, sets the ceiling on loops-in-flight.
 
 When you tune the harness, change one knob at a time, average 3 to 6 runs to beat run-to-run noise, and validate wins on a holdout and a regression set so improvements do not silently backslide.
 

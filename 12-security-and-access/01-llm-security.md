@@ -688,7 +688,7 @@ The defense is layered. No single layer is sufficient; each catches a different 
 2. **Guardrail classifier**: a detector scans retrieved-untrusted content for injection patterns before the content reaches the main model. It can be a small trained classifier, cheap enough to run on every chunk, or a prompted LLM detector such as PromptArmor, which costs a full model call per input.
 3. **Structural quoting**: untrusted content is wrapped in a clearly delimited block (XML tags or a fenced section) with explicit instructions to the main model that text inside the block is data, not instructions.
 4. **Capability gating**: the agent's tool set is restricted based on the trust level of the content currently in context. If the agent is reading retrieved-untrusted text, write-capable tools are disabled by default and require human approval to invoke, and fetch tools are limited to an allowlist of domains.
-5. **Output validation**: the response is scanned for known exfiltration markers (out-of-band URLs, base64 payloads, instruction echoes) before being returned to the user or fed to downstream tools. Treat this as a backstop, since covert channels such as LLMLeak's benign-looking fetch URLs pass it; the egress allowlist in step 4 is the real control.
+5. **Output validation**: the response is scanned for known exfiltration markers (out-of-band URLs, base64 payloads, instruction echoes) before being returned to the user or fed to downstream tools. Treat this as a backstop, since covert channels such as LLMLeak's benign-looking fetch URLs pass it; the egress allowlist in step 4 is what stops it.
 
 ### Defense Pipeline
 

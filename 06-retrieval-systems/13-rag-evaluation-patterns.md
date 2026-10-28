@@ -489,7 +489,7 @@ List prices on October 1, 2026, assuming 90% of tokens are input and 10% output,
 | Answer Relevance | ~2 (question gen) | ~1.6k | $0.009 | $0.0022 | $0.00022 |
 | **Full Triad** | **~10** | **~7k** | **~$0.04** | **~$0.01** | **~$0.001** |
 
-Two caveats change the real bill. Claude Opus 5.5 cannot run with thinking disabled (default effort `medium`), so set `low` effort for judge calls and measure the reasoning tokens. And the binary verification calls can move to a decision-model judge (about $0.0003 per query at Jev's $0.042 per 1M input tokens), leaving only claim extraction and question generation on a generative model.
+Two caveats change the actual bill. Claude Opus 5.5 cannot run with thinking disabled (default effort `medium`), so set `low` effort for judge calls and measure the reasoning tokens. And the binary verification calls can move to a decision-model judge (about $0.0003 per query at Jev's $0.042 per 1M input tokens), leaving only claim extraction and question generation on a generative model.
 
 ### Scaling Strategy
 
@@ -620,7 +620,7 @@ Five strategies, in order of impact:
 
 4. **Heuristic pre-filters**: Before calling the LLM judge, run cheap heuristic checks. If the answer contains "I don't know" or has zero overlap with the context (ROUGE-L < 0.1), skip the expensive faithfulness evaluation and assign a score directly.
 
-5. **Batch and decision models**: Move nightly and weekly runs to a Batch API (50% off), and move binary claim verification to a typed decision-model judge such as Jev. I would not expect the decision model to add accuracy: research in September 2026 found its confident errors are mostly shared by LLM judges, so cascading saves money but a human-labeled slice is still the real check.
+5. **Batch and decision models**: Move nightly and weekly runs to a Batch API (50% off), and move binary claim verification to a typed decision-model judge such as Jev. I would not expect the decision model to add accuracy: research in September 2026 found its confident errors are mostly shared by LLM judges, so cascading saves money but you still need a human-labeled slice to check it.
 
 The goal is to spend evaluation budget where it provides the most signal: on ambiguous, borderline cases where the LLM judge's nuanced reasoning matters, and on the human labels that keep every judge honest.
 

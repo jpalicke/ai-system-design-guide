@@ -65,7 +65,7 @@ The engineering consequences: watermark **and** sign every asset (one layer is n
 
 ## Evaluating Generative Quality
 
-Two unavoidable facts: automated metrics are weak, and human preference is the real ground truth but expensive.
+Two unavoidable facts: automated metrics are weak, and human preference is the ground truth but expensive.
 
 **Automated metrics and why they are unreliable.** FID, the long-standing image metric, contradicts human raters, mishandles distortions, and is biased and unstable at realistic sample sizes; CLIPScore measures text-image alignment but is gameable, and combining weak metrics does not make a strong one. FVD inherits FID's problems and is unstable at the small sample sizes typical of video. For audio, FAD is the FID analogue with the same caveats, and MOS (subjective 1-5) is ceiling-limited now that TTS approaches human quality. Use these as coarse signals, never as correctness.
 

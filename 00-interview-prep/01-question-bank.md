@@ -3807,7 +3807,7 @@ By October 2026 every row has a successor: Claude Fable 5.1 ($10/$50), Opus 5.5 
 
 **Strong answer:**
 
-"The naive answer is 'just call DeepSeek.' The real answer is: redesign the prompt and the workload to make the discounts actually fire.
+"The naive answer is 'just call DeepSeek.' The better answer is: redesign the prompt and the workload to make the discounts actually fire.
 
 **1. Make the prompt cache-friendly.** Provider caches key on prefix. So I move everything stable to the front:
 - System prompt → tool definitions → retrieval block → user turn.
@@ -5346,7 +5346,7 @@ September proved the point within weeks. DeepSeek's V4.1-Flash (September 10) cu
 
 1. **Split the review by component type.** MCP server declarations get reviewed as infrastructure: what transport, what endpoint, what environment variables, what scopes. Skills get reviewed as instructions: what do they tell the agent to do, and does anything in them try to widen the action surface. These are different reviews with different reviewers.
 2. **Static analysis as a filter, never a gate.** Run it, because 93% on exfiltration is worth having, but treat a clean result as 'no known-bad pattern found' rather than 'safe'. The 0% figure means the absence of a finding carries almost no information for the most destructive category.
-3. **Capability review is the real gate.** The question that decides approval is not 'is this skill malicious' but 'what can an agent do after loading this that it could not do before'. If a plugin adds an MCP server with shell execution or write access to a production system, it goes to a security review regardless of how clean the skill text is.
+3. **Gate on capability review.** The question that decides approval is not 'is this skill malicious' but 'what can an agent do after loading this that it could not do before'. If a plugin adds an MCP server with shell execution or write access to a production system, it goes to a security review regardless of how clean the skill text is.
 4. **Runtime containment is what actually holds.** Plugins run against sandboxed tools with allowlisted egress and human approval on irreversible actions. This is the layer that survives a skill nobody caught, and every design should assume one gets through.
 5. **Distribution through an internal registry only.** Signed, versioned, and pinned to verified content digests that the registry checks, not to refs a git host resolves: Plugin4Shell (AIR Security, September 17, 2026) showed SHA-pinned agent plugins could be silently swapped through git branches named like commit hashes, so a pin resolved to attacker code (fixed in Claude Code 2.1.179 and Codex 0.146.0; GitHub Copilot was unpatched at disclosure). No direct installs from public marketplaces onto machines with credentials. Enterprise settings now let plugin installation, marketplace access, and MCP allowlists be managed from one policy file, so use it.
 6. **Provenance and revocation.** Record which agents loaded which plugin version, so a bad version can be traced and pulled rather than discovered by archaeology.
@@ -5678,7 +5678,7 @@ One family can span classes: Qwen3.8-27B is plain Apache 2.0, Flash-Next is gate
 
 Whatever the shape, tool authorization stays in deterministic backend policy, because published attacks inject instructions through audio."
 
-**Follow-up to expect:** Your preferred backend model cannot turn reasoning off. Does that break the design? (Not necessarily: the voice layer acknowledges immediately while the backend thinks. But measure p95 time to a useful answer and pick a backend whose lowest setting fits the budget. Claude Opus 5.5 cannot disable thinking, GPT-6 Astra has no `none` effort, and Claude Sonnet 5.5 can skip up-front thinking with `between_tools`, so routing simple turns to a cheaper, shallower backend is often the real fix.)
+**Follow-up to expect:** Your preferred backend model cannot turn reasoning off. Does that break the design? (Not necessarily: the voice layer acknowledges immediately while the backend thinks. But measure p95 time to a useful answer and pick a backend whose lowest setting fits the budget. Claude Opus 5.5 cannot disable thinking, GPT-6 Astra has no `none` effort, and Claude Sonnet 5.5 can skip up-front thinking with `between_tools`, so routing simple turns to a cheaper, shallower backend is often the fix.)
 
 ### Q137: Your voice agent's median response gap is about 1.1 s, but p95 is 2.6 s and callers talk over it. Walk through where the milliseconds go, and design the instrumentation that attributes every slow turn.
 
